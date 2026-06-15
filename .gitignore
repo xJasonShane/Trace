@@ -1,0 +1,9 @@
+# 基础框架相关
+node_modules/
+unpackage/
+.hbuilderx/
+.DS_Store
+
+# IDE相关
+.trae/
+docs/

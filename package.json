@@ -1,0 +1,12 @@
+{
+  "name": "trace",
+  "version": "1.0.0",
+  "description": "拾光手账 - 地图生活手账应用",
+  "main": "main.js",
+  "dependencies": {
+    "pinia": "^2.0.36"
+  },
+  "devDependencies": {
+    "sass": "^1.62.0"
+  }
+}

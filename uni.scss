@@ -1,76 +1,170 @@
 /**
- * 这里是uni-app内置的常用样式变量
- *
- * uni-app 官方扩展插件及插件市场（https://ext.dcloud.net.cn）上很多三方插件均使用了这些样式变量
- * 如果你是插件开发者，建议你使用scss预处理，并在插件代码中直接使用这些变量（无需 import 这个文件），方便用户通过搭积木的方式开发整体风格一致的App
- *
+ * 拾光手账 — 全局样式变量
+ * 温柔治愈 · 文艺清新
  */
 
-/**
- * 如果你是App开发者（插件使用者），你可以通过修改这些变量来定制自己的插件主题，实现自定义主题功能
- *
- * 如果你的项目同样使用了scss预处理，你也可以直接在你的 scss 代码中使用如下变量，同时无需 import 这个文件
- */
+/* ═══════════════════════════════════════════════════════════════
+   核心色彩
+   ═══════════════════════════════════════════════════════════════ */
+$seed-bg: #FAF8F5;
+$seed-fg: #2D2A26;
+$seed-primary: #E09080;
+$seed-accent: #7FA3C8;
+$seed-surface: #FFFFFF;
+$seed-radius: 36rpx;
 
-/* 颜色变量 */
+/* 背景与表面 */
+$bg: $seed-bg;
+$surface: $seed-surface;
+$fg: $seed-fg;
+$fg-secondary: #6E6A65;
+$fg-tertiary: #A5A09A;
+$muted: #7A756F;
+$border: #E0DCD7;
+$border-light: #EDEAE5;
 
-/* 行为相关颜色 */
-$uni-color-primary: #007aff;
-$uni-color-success: #4cd964;
-$uni-color-warning: #f0ad4e;
-$uni-color-error: #dd524d;
+/* 主题色 */
+$accent: $seed-primary;
+$accent-secondary: $seed-accent;
+$accent-tertiary: #B8A0D0;
+$accent-success: #8FB888;
+$accent-warning: #DDB86A;
+$accent-rating: #D9A54A;
 
-/* 文字基本颜色 */
-$uni-text-color:#333;//基本色
-$uni-text-color-inverse:#fff;//反色
-$uni-text-color-grey:#999;//辅助灰色，如加载更多的提示信息
+/* 主题色半透明 */
+$accent-soft: rgba(224, 144, 128, 0.15);
+$accent2-soft: rgba(127, 163, 200, 0.15);
+$accent3-soft: rgba(184, 160, 208, 0.15);
+$fg-soft: rgba(45, 42, 38, 0.07);
+
+/* 照片占位渐变 */
+$photo-warm-1: #EDCFC6;
+$photo-warm-2: #E4BFB4;
+$photo-warm-3: #D9AFA2;
+$photo-blue-1: #BDD3E8;
+$photo-blue-2: #ADC7E0;
+$photo-blue-3: #9DBBD8;
+$photo-lavender-1: #D2C5E2;
+$photo-lavender-2: #C3B6D8;
+$photo-lavender-3: #B5A8CE;
+$photo-green-1: #C0D9B8;
+$photo-green-2: #B0CFA6;
+$photo-green-3: #9EC594;
+$photo-gold-1: #E2D4B8;
+$photo-gold-2: #D8C8A8;
+$photo-gold-3: #CEBC98;
+
+/* 语义色 */
+$danger: #C8504A;
+$danger-soft: #F0D0CC;
+$trend-up: #4A8E40;
+$trend-up-bg: #E0F0DC;
+$trend-down: #B8504A;
+$trend-down-bg: #F2E0DD;
+
+/* 图标背景色 */
+$icon-edit: $accent;
+$icon-theme: $accent-secondary;
+$icon-notify: $accent-tertiary;
+$icon-backup: $accent-success;
+$icon-about: $accent-warning;
+
+/* 地图配色 */
+$map-water: #B5CCE3;
+$map-water-deep: #9BB8D5;
+$map-park: #B8D5AE;
+$map-road: #E0DCD7;
+$map-road-sub: #EAE6E1;
+$map-building: #EDEAE5;
+$map-label: #B5B0AA;
+
+/* 详情页渐变 */
+$hero-1: #E0C5BB;
+$hero-2: #D4B5AA;
+$hero-3: #C8A599;
+
+/* 照片图标描边 */
+$stroke-warm: #C09080;
+$stroke-blue: #7A9AB5;
+$stroke-lavender: #9880B0;
+
+/* 设备框 */
+$device-bezel: #1C1C1E;
+$device-island: #0A0A0C;
+
+/* 工具色 */
+$white: #ffffff;
+$black: #000000;
+$tab-bg: rgba(250, 248, 245, 0.96);
+
+/* ═══════════════════════════════════════════════════════════════
+   字体
+   ═══════════════════════════════════════════════════════════════ */
+$font-size-base: 28rpx;
+$font-display: -apple-system, 'SF Pro Display', 'PingFang SC', 'Helvetica Neue', sans-serif;
+$font-body: -apple-system, 'SF Pro Text', 'PingFang SC', 'Helvetica Neue', sans-serif;
+$font-mono: ui-monospace, 'SF Mono', 'Menlo', monospace;
+
+/* ═══════════════════════════════════════════════════════════════
+   圆角
+   ═══════════════════════════════════════════════════════════════ */
+$radius-card: $seed-radius;
+$radius-sm: 24rpx;
+$radius-pill: 999rpx;
+
+/* ═══════════════════════════════════════════════════════════════
+   阴影
+   ═══════════════════════════════════════════════════════════════ */
+$shadow-card: 0 2rpx 16rpx rgba(0, 0, 0, 0.06);
+$shadow-float: 0 12rpx 48rpx rgba(0, 0, 0, 0.10);
+
+/* ═══════════════════════════════════════════════════════════════
+   uni-app 内置变量（保留兼容）
+   ═══════════════════════════════════════════════════════════════ */
+$uni-color-primary: $accent;
+$uni-color-success: $accent-success;
+$uni-color-warning: $accent-warning;
+$uni-color-error: $danger;
+
+$uni-text-color: $fg;
+$uni-text-color-inverse: $white;
+$uni-text-color-grey: $fg-tertiary;
 $uni-text-color-placeholder: #808080;
-$uni-text-color-disable:#c0c0c0;
+$uni-text-color-disable: #c0c0c0;
 
-/* 背景颜色 */
-$uni-bg-color:#ffffff;
-$uni-bg-color-grey:#f8f8f8;
-$uni-bg-color-hover:#f1f1f1;//点击状态颜色
-$uni-bg-color-mask:rgba(0, 0, 0, 0.4);//遮罩颜色
+$uni-bg-color: $surface;
+$uni-bg-color-grey: $bg;
+$uni-bg-color-hover: #f1f1f1;
+$uni-bg-color-mask: rgba(0, 0, 0, 0.4);
 
-/* 边框颜色 */
-$uni-border-color:#c8c7cc;
+$uni-border-color: $border;
 
-/* 尺寸变量 */
+$uni-font-size-sm: 24rpx;
+$uni-font-size-base: 28rpx;
+$uni-font-size-lg: 32rpx;
 
-/* 文字尺寸 */
-$uni-font-size-sm:12px;
-$uni-font-size-base:14px;
-$uni-font-size-lg:16px;
+$uni-img-size-sm: 40rpx;
+$uni-img-size-base: 52rpx;
+$uni-img-size-lg: 80rpx;
 
-/* 图片尺寸 */
-$uni-img-size-sm:20px;
-$uni-img-size-base:26px;
-$uni-img-size-lg:40px;
-
-/* Border Radius */
-$uni-border-radius-sm: 2px;
-$uni-border-radius-base: 3px;
-$uni-border-radius-lg: 6px;
+$uni-border-radius-sm: 4rpx;
+$uni-border-radius-base: 6rpx;
+$uni-border-radius-lg: 12rpx;
 $uni-border-radius-circle: 50%;
 
-/* 水平间距 */
-$uni-spacing-row-sm: 5px;
-$uni-spacing-row-base: 10px;
-$uni-spacing-row-lg: 15px;
+$uni-spacing-row-sm: 10rpx;
+$uni-spacing-row-base: 20rpx;
+$uni-spacing-row-lg: 30rpx;
 
-/* 垂直间距 */
-$uni-spacing-col-sm: 4px;
-$uni-spacing-col-base: 8px;
-$uni-spacing-col-lg: 12px;
+$uni-spacing-col-sm: 8rpx;
+$uni-spacing-col-base: 16rpx;
+$uni-spacing-col-lg: 24rpx;
 
-/* 透明度 */
-$uni-opacity-disabled: 0.3; // 组件禁用态的透明度
+$uni-opacity-disabled: 0.3;
 
-/* 文章场景相关 */
-$uni-color-title: #2C405A; // 文章标题颜色
-$uni-font-size-title:20px;
-$uni-color-subtitle: #555555; // 二级标题颜色
-$uni-font-size-subtitle:26px;
-$uni-color-paragraph: #3F536E; // 文章段落颜色
-$uni-font-size-paragraph:15px;
+$uni-color-title: #2C405A;
+$uni-font-size-title: 40rpx;
+$uni-color-subtitle: #555555;
+$uni-font-size-subtitle: 52rpx;
+$uni-color-paragraph: #3F536E;
+$uni-font-size-paragraph: 30rpx;

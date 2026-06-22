@@ -1,5 +1,5 @@
 <template>
-	<view class="page">
+	<view class="page" :class="themeClass">
 		<!-- 状态栏占位 -->
 		<view class="statusbar-placeholder" :style="{ height: statusBarHeight + 'px' }"></view>
 
@@ -95,9 +95,11 @@ import TabBar from '@/components/TabBar.vue'
 import { useJournalStore } from '@/store/journal.js'
 import { useLocationStore } from '@/store/location.js'
 import { useProfileStore } from '@/store/profile.js'
+import themeMixin from '@/mixins/theme.js'
 
 export default {
 	components: { TabBar },
+	mixins: [themeMixin],
 	setup() {
 		const journalStore = useJournalStore()
 		const locationStore = useLocationStore()
@@ -175,7 +177,7 @@ export default {
 	height: 100vh;
 	display: flex;
 	flex-direction: column;
-	background: #FAF8F5;
+	background: var(--bg);
 }
 
 .statusbar-placeholder {
@@ -191,7 +193,7 @@ export default {
 	display: block;
 	font-size: 44rpx;
 	font-weight: 600;
-	color: #2D2A26;
+	color: var(--fg);
 	letter-spacing: -0.02em;
 }
 
@@ -209,11 +211,11 @@ export default {
 }
 
 .stats-card {
-	background: #FFFFFF;
-	border: 1rpx solid #EDEAE5;
+	background: var(--surface);
+	border: 1rpx solid var(--border);
 	border-radius: 28rpx;
 	padding: 24rpx;
-	box-shadow: 0 2rpx 16rpx rgba(0, 0, 0, 0.06);
+	box-shadow: 0 2rpx 16rpx var(--shadow);
 	display: flex;
 	flex-direction: column;
 	gap: 4rpx;
@@ -223,13 +225,13 @@ export default {
 	font-family: ui-monospace, 'SF Mono', monospace;
 	font-size: 52rpx;
 	font-weight: 700;
-	color: #2D2A26;
+	color: var(--fg);
 	line-height: 1.1;
 }
 
 .sc-lbl {
 	font-size: 24rpx;
-	color: #7A756F;
+	color: var(--text-secondary);
 	margin-top: 4rpx;
 }
 
@@ -257,18 +259,18 @@ export default {
 
 .chart-card {
 	margin: 0 32rpx 24rpx;
-	background: #FFFFFF;
-	border: 1rpx solid #EDEAE5;
+	background: var(--surface);
+	border: 1rpx solid var(--border);
 	border-radius: 28rpx;
 	padding: 24rpx;
-	box-shadow: 0 2rpx 16rpx rgba(0, 0, 0, 0.06);
+	box-shadow: 0 2rpx 16rpx var(--shadow);
 }
 
 .chart-title {
 	display: block;
 	font-size: 28rpx;
 	font-weight: 600;
-	color: #2D2A26;
+	color: var(--fg);
 	margin-bottom: 20rpx;
 }
 
@@ -308,7 +310,7 @@ export default {
 
 .bar-label {
 	font-size: 20rpx;
-	color: #A5A09A;
+	color: var(--text-tertiary);
 	margin-top: 8rpx;
 }
 
@@ -321,7 +323,7 @@ export default {
 	display: block;
 	font-size: 28rpx;
 	font-weight: 600;
-	color: #2D2A26;
+	color: var(--fg);
 	margin-bottom: 20rpx;
 	position: relative;
 	padding-left: 20rpx;
@@ -355,7 +357,7 @@ export default {
 .mood-track {
 	flex: 1;
 	height: 20rpx;
-	background: rgba(45, 42, 38, 0.07);
+	background: var(--input-bg);
 	border-radius: 10rpx;
 	overflow: hidden;
 }
@@ -370,7 +372,7 @@ export default {
 	font-family: ui-monospace, 'SF Mono', monospace;
 	font-size: 24rpx;
 	font-weight: 700;
-	color: #6E6A65;
+	color: var(--text-secondary);
 	width: 72rpx;
 	text-align: right;
 }

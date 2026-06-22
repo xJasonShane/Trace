@@ -1,5 +1,5 @@
 <template>
-	<view class="page">
+	<view class="page" :class="themeClass">
 		<!-- 状态栏占位 -->
 		<view class="statusbar-placeholder" :style="{ height: statusBarHeight + 'px' }"></view>
 
@@ -40,7 +40,7 @@
 					</view>
 					<text class="settings-label">编辑资料</text>
 					<view class="settings-arrow">
-						<Icon name="arrowRight" :size="28" color="#A5A09A" :strokeWidth="2" />
+						<Icon name="arrowRight" :size="28" :color="themeTertiaryColor" :strokeWidth="2" />
 					</view>
 				</view>
 				<view class="settings-row" @tap="goTheme">
@@ -48,8 +48,9 @@
 						<Icon name="sun" :size="34" color="#FFFFFF" :strokeWidth="1.8" />
 					</view>
 					<text class="settings-label">主题外观</text>
+					<text class="settings-meta">{{ settings.theme === 'dark' ? '黑夜模式' : '白天模式' }}</text>
 					<view class="settings-arrow">
-						<Icon name="arrowRight" :size="28" color="#A5A09A" :strokeWidth="2" />
+						<Icon name="arrowRight" :size="28" :color="themeTertiaryColor" :strokeWidth="2" />
 					</view>
 				</view>
 				<view class="settings-row">
@@ -74,7 +75,7 @@
 					<text class="settings-label">数据备份</text>
 					<text class="settings-meta">{{ settings.backup ? '已开启' : '未开启' }}</text>
 					<view class="settings-arrow">
-						<Icon name="arrowRight" :size="28" color="#A5A09A" :strokeWidth="2" />
+						<Icon name="arrowRight" :size="28" :color="themeTertiaryColor" :strokeWidth="2" />
 					</view>
 				</view>
 				<view class="settings-row" @tap="goAbout">
@@ -84,7 +85,7 @@
 					<text class="settings-label">关于拾光</text>
 					<text class="settings-meta">v1.0.0</text>
 					<view class="settings-arrow">
-						<Icon name="arrowRight" :size="28" color="#A5A09A" :strokeWidth="2" />
+						<Icon name="arrowRight" :size="28" :color="themeTertiaryColor" :strokeWidth="2" />
 					</view>
 				</view>
 			</view>
@@ -101,12 +102,14 @@
 <script>
 import TabBar from '@/components/TabBar.vue'
 import Icon from '@/components/Icon.vue'
+import themeMixin from '@/mixins/theme.js'
 import { useProfileStore } from '@/store/profile.js'
 import { useJournalStore } from '@/store/journal.js'
 import { useLocationStore } from '@/store/location.js'
 
 export default {
 	components: { TabBar, Icon },
+	mixins: [themeMixin],
 	setup() {
 		const profileStore = useProfileStore()
 		const journalStore = useJournalStore()
@@ -147,7 +150,17 @@ export default {
 			uni.navigateTo({ url: '/pages/profile-edit/index' })
 		},
 		goTheme() {
-			uni.showToast({ title: '主题功能开发中', icon: 'none' })
+			uni.showActionSheet({
+				itemList: ['白天模式', '黑夜模式'],
+				success: (res) => {
+					const theme = res.tapIndex === 1 ? 'dark' : 'light'
+					this.profileStore.saveSettings({ theme })
+					uni.showToast({
+						title: theme === 'dark' ? '已切换至黑夜模式' : '已切换至白天模式',
+						icon: 'none'
+					})
+				}
+			})
 		},
 		goBackup() {
 			uni.showToast({ title: '备份功能开发中', icon: 'none' })
@@ -169,7 +182,7 @@ export default {
 	height: 100vh;
 	display: flex;
 	flex-direction: column;
-	background: #FAF8F5;
+	background: var(--bg);
 }
 
 .statusbar-placeholder {
@@ -208,14 +221,14 @@ export default {
 	display: block;
 	font-size: 34rpx;
 	font-weight: 600;
-	color: #2D2A26;
+	color: var(--fg);
 	margin-bottom: 8rpx;
 }
 
 .profile-bio {
 	display: block;
 	font-size: 26rpx;
-	color: #7A756F;
+	color: var(--text-secondary);
 }
 
 .profile-stats {
@@ -236,28 +249,28 @@ export default {
 .ps-divider {
 	width: 1rpx;
 	height: 60rpx;
-	background: #EDEAE5;
+	background: var(--border);
 }
 
 .pv {
 	font-family: ui-monospace, 'SF Mono', monospace;
 	font-size: 40rpx;
 	font-weight: 700;
-	color: #2D2A26;
+	color: var(--fg);
 }
 
 .pl {
 	font-size: 22rpx;
-	color: #7A756F;
+	color: var(--text-secondary);
 }
 
 .settings-group {
 	margin: 0 32rpx 24rpx;
-	background: #FFFFFF;
-	border: 1rpx solid #EDEAE5;
+	background: var(--surface);
+	border: 1rpx solid var(--border);
 	border-radius: 28rpx;
 	padding: 0 28rpx;
-	box-shadow: 0 2rpx 16rpx rgba(0, 0, 0, 0.06);
+	box-shadow: 0 2rpx 16rpx var(--shadow);
 }
 
 .settings-row {
@@ -265,7 +278,7 @@ export default {
 	align-items: center;
 	gap: 24rpx;
 	padding: 26rpx 0;
-	border-bottom: 1rpx solid #EDEAE5;
+	border-bottom: 1rpx solid var(--border);
 }
 
 .settings-row:last-child {
@@ -292,12 +305,12 @@ export default {
 	flex: 1;
 	font-size: 30rpx;
 	font-weight: 500;
-	color: #2D2A26;
+	color: var(--fg);
 }
 
 .settings-meta {
 	font-size: 26rpx;
-	color: #A5A09A;
+	color: var(--text-tertiary);
 	margin-right: 8rpx;
 }
 
@@ -330,7 +343,7 @@ export default {
 }
 
 .toggle.off {
-	background: #E0DCD7;
+	background: var(--border-light);
 }
 
 .toggle.off::after {

@@ -10,7 +10,7 @@
 			<Icon
 				:name="tab.icon"
 				:size="40"
-				:color="active === index ? '#E09080' : '#A5A09A'"
+				:color="active === index ? activeColor : inactiveColor"
 				:strokeWidth="active === index ? 2 : 1.5"
 			/>
 			<text class="tab-label">{{ tab.label }}</text>
@@ -21,10 +21,12 @@
 
 <script>
 import Icon from './Icon.vue'
+import themeMixin from '@/mixins/theme.js'
 
 export default {
 	name: 'TabBar',
 	components: { Icon },
+	mixins: [themeMixin],
 	props: {
 		active: {
 			type: Number,
@@ -47,6 +49,14 @@ export default {
 			]
 		}
 	},
+	computed: {
+		activeColor() {
+			return '#E09080'
+		},
+		inactiveColor() {
+			return this.themeClass === 'theme-dark' ? '#6E6A65' : '#A5A09A'
+		}
+	},
 	methods: {
 		switchTab(index) {
 			if (this.active === index) return
@@ -61,8 +71,8 @@ export default {
 	display: flex;
 	padding: 12rpx 16rpx 0;
 	padding-bottom: env(safe-area-inset-bottom);
-	border-top: 1rpx solid #EDEAE5;
-	background: rgba(250, 248, 245, 0.96);
+	border-top: 1rpx solid var(--border);
+	background: var(--overlay);
 }
 
 /* fixed 模式：浮动定位，适用于无原生组件的普通页面 */
@@ -89,12 +99,12 @@ export default {
 	align-items: center;
 	gap: 4rpx;
 	padding: 10rpx 0 6rpx;
-	color: #A5A09A;
+	color: var(--text-tertiary);
 	position: relative;
 }
 
 .tab.active {
-	color: #E09080;
+	color: var(--primary);
 }
 
 .tab-label {
@@ -114,7 +124,7 @@ export default {
 	transform: translateX(-50%);
 	width: 8rpx;
 	height: 8rpx;
-	background: #E09080;
+	background: var(--primary);
 	border-radius: 50%;
 }
 </style>

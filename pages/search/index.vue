@@ -1,5 +1,5 @@
 <template>
-	<view class="page">
+	<view class="page" :class="themeClass">
 		<!-- 状态栏占位 -->
 		<view class="statusbar" :style="{ height: statusBarHeight + 'px' }"></view>
 
@@ -11,15 +11,15 @@
 			<view class="search-input-wrap">
 				<Icon name="search" :size="32" :color="accent" :stroke-width="2" />
 				<input
-					class="search-input"
-					v-model="keyword"
-					placeholder="搜索地点或回忆…"
-					placeholder-style="color: #A5A09A;"
-					:focus="autoFocus"
-					confirm-type="search"
-					@input="onInput"
-					@confirm="onSearch"
-				/>
+				class="search-input"
+				v-model="keyword"
+				placeholder="搜索地点或回忆…"
+				:placeholder-style="placeholderStyle"
+				:focus="autoFocus"
+				confirm-type="search"
+				@input="onInput"
+				@confirm="onSearch"
+			/>
 				<view v-if="keyword" class="clear-btn" @tap="onClear">
 					<view class="clear-icon">×</view>
 				</view>
@@ -119,9 +119,11 @@ import Icon from '@/components/Icon.vue'
 import { useJournalStore } from '@/store/journal.js'
 import { useLocationStore } from '@/store/location.js'
 import dateUtil from '@/utils/date.js'
+import themeMixin from '@/mixins/theme.js'
 
 export default {
 	components: { Icon },
+	mixins: [themeMixin],
 	data() {
 		return {
 			statusBarHeight: 20,
@@ -139,12 +141,19 @@ export default {
 				{ key: 'journal', label: '手账' },
 				{ key: 'tag', label: '标签' }
 			],
-			accent: '#E09080',
-			fg: '#2D2A26',
-			fgTertiary: '#A5A09A'
+			accent: '#E09080'
 		}
 	},
 	computed: {
+		fg() {
+			return this.themeFgColor
+		},
+		fgTertiary() {
+			return this.themeTertiaryColor
+		},
+		placeholderStyle() {
+			return this.themeClass === 'theme-dark' ? 'color: #6E6A65;' : 'color: #A5A09A;'
+		},
 		resultList() {
 			if (this.activeFilter === 'location') return this.locationResults
 			if (this.activeFilter === 'journal') return this.journalResults
@@ -304,7 +313,7 @@ export default {
 <style lang="scss" scoped>
 .page {
 	min-height: 100vh;
-	background: #FAF8F5;
+	background: var(--bg);
 	display: flex;
 	flex-direction: column;
 }
@@ -327,7 +336,7 @@ export default {
 	align-items: center;
 	justify-content: center;
 	border-radius: 20rpx;
-	background: rgba(45, 42, 38, 0.07);
+	background: var(--input-bg);
 	flex-shrink: 0;
 }
 
@@ -336,7 +345,7 @@ export default {
 	display: flex;
 	align-items: center;
 	gap: 16rpx;
-	background: #FFFFFF;
+	background: var(--surface);
 	border: 1.5rpx solid #E09080;
 	border-radius: 20rpx;
 	padding: 14rpx 24rpx;
@@ -347,7 +356,7 @@ export default {
 	flex: 1;
 	font-size: 28rpx;
 	font-family: -apple-system, 'PingFang SC', sans-serif;
-	color: #2D2A26;
+	color: var(--fg);
 	background: transparent;
 	min-width: 0;
 }
@@ -393,8 +402,8 @@ export default {
 
 .filter-item.inactive {
 	background: transparent;
-	color: #7A756F;
-	border: 1rpx solid #E0DCD7;
+	color: var(--text-secondary);
+	border: 1rpx solid var(--border-light);
 }
 
 .search-results {
@@ -404,7 +413,7 @@ export default {
 
 .search-count {
 	font-size: 24rpx;
-	color: #7A756F;
+	color: var(--text-secondary);
 	margin-bottom: 16rpx;
 	padding: 4rpx 0;
 }
@@ -413,12 +422,12 @@ export default {
 	position: relative;
 	display: flex;
 	gap: 20rpx;
-	background: #FFFFFF;
-	border: 1rpx solid #EDEAE5;
+	background: var(--surface);
+	border: 1rpx solid var(--border);
 	border-radius: 24rpx;
 	padding: 20rpx;
 	margin-bottom: 16rpx;
-	box-shadow: 0 2rpx 16rpx rgba(0, 0, 0, 0.06);
+	box-shadow: 0 2rpx 16rpx var(--shadow);
 }
 
 .list-card-hover {
@@ -463,21 +472,21 @@ export default {
 .lc-title {
 	font-size: 28rpx;
 	font-weight: 600;
-	color: #2D2A26;
+	color: var(--fg);
 	margin-bottom: 6rpx;
 	line-height: 1.4;
 }
 
 .lc-loc {
 	font-size: 24rpx;
-	color: #7A756F;
+	color: var(--text-secondary);
 	margin-bottom: 4rpx;
 	line-height: 1.4;
 }
 
 .lc-date {
 	font-size: 22rpx;
-	color: #A5A09A;
+	color: var(--text-tertiary);
 }
 
 .lc-type-badge {
@@ -518,7 +527,7 @@ export default {
 	width: 160rpx;
 	height: 160rpx;
 	border-radius: 50%;
-	background: rgba(45, 42, 38, 0.07);
+	background: var(--input-bg);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -528,13 +537,13 @@ export default {
 .empty-title {
 	font-size: 32rpx;
 	font-weight: 600;
-	color: #2D2A26;
+	color: var(--fg);
 	margin-bottom: 12rpx;
 }
 
 .empty-desc {
 	font-size: 26rpx;
-	color: #7A756F;
+	color: var(--text-secondary);
 	line-height: 1.5;
 }
 </style>

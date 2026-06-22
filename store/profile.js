@@ -15,7 +15,7 @@ export const useProfileStore = defineStore('profile', {
 		}),
 		settings: storage.get(storage.KEYS.SETTINGS, {
 			notifications: true,
-			theme: 'warm',
+			theme: 'light',
 			backup: true
 		})
 	}),

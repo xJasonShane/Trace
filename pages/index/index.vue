@@ -1,5 +1,5 @@
 <template>
-	<view class="page">
+	<view class="page" :class="themeClass">
 		<!-- 状态栏占位 -->
 		<view class="statusbar-placeholder" :style="{ height: statusBarHeight + 'px' }"></view>
 
@@ -16,25 +16,25 @@
 			></map>
 
 			<!-- 搜索栏（使用 cover-view 覆盖原生 map 组件） -->
-			<cover-view class="map-search" @tap="goSearch">
-				<cover-image class="map-search-icon" :src="iconSrc('search', '#A5A09A', 2)" />
-				<cover-view class="map-search-text">搜索地点或回忆…</cover-view>
+			<cover-view class="map-search" :style="coverBoxStyle" @tap="goSearch">
+				<cover-image class="map-search-icon" :src="iconSrc('search', searchIconColor, 2)" />
+				<cover-view class="map-search-text" :style="coverSubStyle">搜索地点或回忆…</cover-view>
 			</cover-view>
 
 			<!-- 定位按钮 -->
-			<cover-view class="locate-btn" @tap="locate">
-				<cover-image class="locate-icon" :src="iconSrc('locate', '#6E6A65', 2)" />
+			<cover-view class="locate-btn" :style="coverBoxStyle" @tap="locate">
+				<cover-image class="locate-icon" :src="iconSrc('locate', locateIconColor, 2)" />
 			</cover-view>
 
 			<!-- 底部信息卡片 -->
-			<cover-view v-if="selectedLocation" class="map-card" @tap="goLocationDetail">
+			<cover-view v-if="selectedLocation" class="map-card" :style="coverBoxStyle" @tap="goLocationDetail">
 				<cover-view class="mc-row">
 					<cover-view class="mc-thumb" :class="'ph-' + (selectedLocation.coverColor || 'warm')">
 						<cover-image class="mc-thumb-icon" :src="iconSrc('mountain', '#FFFFFF', 1.4)" />
 					</cover-view>
 					<cover-view class="mc-info">
-						<cover-view class="mc-name">{{ selectedLocation.name }}</cover-view>
-						<cover-view class="mc-sub">{{ selectedLocation.journalCount || 0 }} 篇手账 · 最近 {{ lastVisitText }}</cover-view>
+						<cover-view class="mc-name" :style="coverNameStyle">{{ selectedLocation.name }}</cover-view>
+						<cover-view class="mc-sub" :style="coverSubStyle">{{ selectedLocation.journalCount || 0 }} 篇手账 · 最近 {{ lastVisitText }}</cover-view>
 						<cover-view class="mc-rating">
 							<cover-view class="mc-score">5.0</cover-view>
 							<cover-view class="mc-stars">★★★★★</cover-view>
@@ -53,6 +53,7 @@
 import TabBar from '@/components/TabBar.vue'
 import Icon from '@/components/Icon.vue'
 import StarRating from '@/components/StarRating.vue'
+import themeMixin from '@/mixins/theme.js'
 import { useLocationStore } from '@/store/location.js'
 import dateUtil from '@/utils/date.js'
 
@@ -65,6 +66,7 @@ const COVER_ICONS = {
 
 export default {
 	components: { TabBar, Icon, StarRating },
+	mixins: [themeMixin],
 	setup() {
 		const locationStore = useLocationStore()
 		return { locationStore }
@@ -83,6 +85,24 @@ export default {
 		}
 	},
 	computed: {
+		searchIconColor() {
+			return this.themeClass === 'theme-dark' ? '#6E6A65' : '#A5A09A'
+		},
+		locateIconColor() {
+			return this.themeClass === 'theme-dark' ? '#A5A09A' : '#6E6A65'
+		},
+		coverBoxStyle() {
+			if (this.themeClass === 'theme-dark') {
+				return 'background: #2A2724; border: 1rpx solid #3A3734;'
+			}
+			return 'background: #FFFFFF; border: 1rpx solid #EDEAE5;'
+		},
+		coverNameStyle() {
+			return this.themeClass === 'theme-dark' ? 'color: #E8E4E0;' : 'color: #2D2A26;'
+		},
+		coverSubStyle() {
+			return this.themeClass === 'theme-dark' ? 'color: #A5A09A;' : 'color: #7A756F;'
+		},
 		displayLocations() {
 			const locs = this.locationStore.locations
 			return locs && locs.length > 0 ? locs : this.defaultLocations
@@ -169,7 +189,7 @@ export default {
 	height: 100vh;
 	display: flex;
 	flex-direction: column;
-	background: #FAF8F5;
+	background: var(--bg);
 	position: relative;
 }
 

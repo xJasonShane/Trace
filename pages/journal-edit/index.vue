@@ -1,11 +1,11 @@
 <template>
-	<view class="page">
+	<view class="page" :class="themeClass">
 		<!-- 导航栏 -->
 		<view class="nav-bar">
 			<view class="status-bar-spacer" :style="{ height: statusBarHeight + 'px' }"></view>
 			<view class="nav-content">
 				<view class="nav-back" @tap="goBack">
-					<Icon name="back" :size="36" color="#2D2A26" :strokeWidth="2" />
+					<Icon name="back" :size="36" :color="themeFgColor" :strokeWidth="2" />
 				</view>
 				<text class="nav-title">{{ isEdit ? '编辑手账' : '新建手账' }}</text>
 				<view class="nav-placeholder"></view>
@@ -117,11 +117,13 @@ import Icon from '@/components/Icon.vue'
 import StarRating from '@/components/StarRating.vue'
 import MoodSelect from '@/components/MoodSelect.vue'
 import PhotoUpload from '@/components/PhotoUpload.vue'
+import themeMixin from '@/mixins/theme.js'
 import { useJournalStore } from '@/store/journal.js'
 import { useLocationStore } from '@/store/location.js'
 
 export default {
 	components: { Icon, StarRating, MoodSelect, PhotoUpload },
+	mixins: [themeMixin],
 	data() {
 		return {
 			journalStore: useJournalStore(),
@@ -296,7 +298,7 @@ export default {
 <style lang="scss" scoped>
 .page {
 	min-height: 100vh;
-	background: #FAF8F5;
+	background: var(--bg);
 }
 
 /* 导航栏 */
@@ -306,8 +308,8 @@ export default {
 	left: 0;
 	right: 0;
 	z-index: 100;
-	background: #FAF8F5;
-	border-bottom: 1rpx solid #EDEAE5;
+	background: var(--bg);
+	border-bottom: 1rpx solid var(--border);
 }
 
 .nav-content {
@@ -332,7 +334,7 @@ export default {
 	text-align: center;
 	font-size: 32rpx;
 	font-weight: 600;
-	color: #2D2A26;
+	color: var(--fg);
 	letter-spacing: -0.01em;
 }
 
@@ -353,7 +355,7 @@ export default {
 .form-label {
 	font-size: 26rpx;
 	font-weight: 600;
-	color: #6E6A65;
+	color: var(--text-secondary);
 	margin-bottom: 16rpx;
 	display: block;
 }
@@ -361,27 +363,29 @@ export default {
 .form-input {
 	width: 100%;
 	padding: 24rpx 28rpx;
-	border: 1rpx solid #E0DCD7;
+	min-height: 88rpx;
+	line-height: 1.5;
+	border: 1rpx solid var(--border-light);
 	border-radius: 20rpx;
 	font-size: 28rpx;
-	background: #FFFFFF;
-	color: #2D2A26;
+	background: var(--surface);
+	color: var(--fg);
 	box-sizing: border-box;
 }
 
 .input-placeholder {
-	color: #A5A09A;
+	color: var(--text-tertiary);
 	font-size: 28rpx;
 }
 
 .form-textarea {
 	width: 100%;
 	padding: 24rpx 28rpx;
-	border: 1rpx solid #E0DCD7;
+	border: 1rpx solid var(--border-light);
 	border-radius: 20rpx;
 	font-size: 28rpx;
-	background: #FFFFFF;
-	color: #2D2A26;
+	background: var(--surface);
+	color: var(--fg);
 	min-height: 240rpx;
 	line-height: 1.6;
 	box-sizing: border-box;
@@ -389,11 +393,11 @@ export default {
 
 /* 评分维度 */
 .dim-ratings {
-	background: #FFFFFF;
-	border: 1rpx solid #EDEAE5;
+	background: var(--surface);
+	border: 1rpx solid var(--border);
 	border-radius: 24rpx;
 	padding: 16rpx 28rpx;
-	box-shadow: 0 2rpx 16rpx rgba(0, 0, 0, 0.06);
+	box-shadow: 0 2rpx 16rpx var(--shadow);
 }
 
 .dim-row {
@@ -401,7 +405,7 @@ export default {
 	align-items: center;
 	justify-content: space-between;
 	padding: 24rpx 0;
-	border-bottom: 1rpx solid #EDEAE5;
+	border-bottom: 1rpx solid var(--border);
 }
 
 .dim-row:last-child {
@@ -411,7 +415,7 @@ export default {
 
 .dim-label {
 	font-size: 28rpx;
-	color: #2D2A26;
+	color: var(--fg);
 	font-weight: 500;
 }
 
@@ -449,8 +453,8 @@ export default {
 	align-items: center;
 	padding: 10rpx 20rpx;
 	background: transparent;
-	color: #7A756F;
-	border: 1rpx solid #E0DCD7;
+	color: var(--text-secondary);
+	border: 1rpx solid var(--border-light);
 	border-radius: 999rpx;
 	font-size: 24rpx;
 	font-weight: 500;

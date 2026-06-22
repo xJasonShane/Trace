@@ -1,5 +1,5 @@
 <template>
-	<view class="page">
+	<view class="page" :class="themeClass">
 		<!-- Hero 区域 -->
 		<view class="hero">
 			<view class="status-bar-spacer" :style="{ height: statusBarHeight + 'px' }"></view>
@@ -10,10 +10,10 @@
 				</view>
 				<view class="hero-nav">
 					<view class="nav-btn" @tap="goBack">
-						<Icon name="back" :size="32" color="#2D2A26" :strokeWidth="2" />
+						<Icon name="back" :size="32" :color="themeFgColor" :strokeWidth="2" />
 					</view>
 					<view class="nav-btn" @tap="goToEdit">
-						<Icon name="edit" :size="30" color="#2D2A26" :strokeWidth="2" />
+						<Icon name="edit" :size="30" :color="themeFgColor" :strokeWidth="2" />
 					</view>
 				</view>
 			</view>
@@ -98,9 +98,11 @@ import Icon from '@/components/Icon.vue'
 import StarRating from '@/components/StarRating.vue'
 import { useJournalStore } from '@/store/journal.js'
 import dateUtil from '@/utils/date.js'
+import themeMixin from '@/mixins/theme.js'
 
 export default {
 	components: { Icon, StarRating },
+	mixins: [themeMixin],
 	data() {
 		return {
 			journalStore: useJournalStore(),
@@ -190,7 +192,7 @@ export default {
 <style lang="scss" scoped>
 .page {
 	min-height: 100vh;
-	background: #FAF8F5;
+	background: var(--bg);
 	padding-bottom: 80rpx;
 }
 
@@ -261,7 +263,7 @@ export default {
 .title {
 	font-size: 40rpx;
 	font-weight: 600;
-	color: #2D2A26;
+	color: var(--fg);
 	letter-spacing: -0.01em;
 	margin-bottom: 12rpx;
 	display: block;
@@ -276,12 +278,12 @@ export default {
 
 .meta-item {
 	font-size: 24rpx;
-	color: #7A756F;
+	color: var(--text-secondary);
 }
 
 .meta-divider {
 	font-size: 24rpx;
-	color: #A5A09A;
+	color: var(--text-tertiary);
 }
 
 /* 标签行 */
@@ -317,8 +319,8 @@ export default {
 	display: inline-flex;
 	padding: 8rpx 20rpx;
 	background: transparent;
-	color: #7A756F;
-	border: 1rpx solid #E0DCD7;
+	color: var(--text-secondary);
+	border: 1rpx solid var(--border-light);
 	border-radius: 999rpx;
 	font-size: 24rpx;
 	font-weight: 500;
@@ -328,7 +330,7 @@ export default {
 .content-text {
 	font-size: 30rpx;
 	line-height: 1.7;
-	color: #6E6A65;
+	color: var(--text-secondary);
 	margin-bottom: 28rpx;
 	letter-spacing: 0.01em;
 }
@@ -355,8 +357,8 @@ export default {
 
 /* 评分卡片 */
 .rating-card {
-	background: #FFFFFF;
-	border: 1rpx solid #EDEAE5;
+	background: var(--surface);
+	border: 1rpx solid var(--border);
 	border-radius: 36rpx;
 	padding: 32rpx;
 	display: flex;
@@ -365,7 +367,7 @@ export default {
 	margin-bottom: 20rpx;
 	position: relative;
 	overflow: hidden;
-	box-shadow: 0 2rpx 16rpx rgba(0, 0, 0, 0.06);
+	box-shadow: 0 2rpx 16rpx var(--shadow);
 }
 
 .rating-card::before {
@@ -396,26 +398,26 @@ export default {
 
 .rc-label {
 	font-size: 24rpx;
-	color: #7A756F;
+	color: var(--text-secondary);
 	font-weight: 500;
 }
 
 /* 评分维度 */
 .dim-ratings {
-	background: #FFFFFF;
-	border: 1rpx solid #EDEAE5;
+	background: var(--surface);
+	border: 1rpx solid var(--border);
 	border-radius: 36rpx;
 	padding: 24rpx 32rpx;
-	box-shadow: 0 2rpx 16rpx rgba(0, 0, 0, 0.06);
+	box-shadow: 0 2rpx 16rpx var(--shadow);
 }
 
 .dim-title {
 	font-size: 28rpx;
 	font-weight: 600;
-	color: #2D2A26;
+	color: var(--fg);
 	margin-bottom: 16rpx;
 	padding-bottom: 16rpx;
-	border-bottom: 1rpx solid #EDEAE5;
+	border-bottom: 1rpx solid var(--border);
 }
 
 .dim-row {
@@ -423,7 +425,7 @@ export default {
 	align-items: center;
 	justify-content: space-between;
 	padding: 20rpx 0;
-	border-bottom: 1rpx solid #EDEAE5;
+	border-bottom: 1rpx solid var(--border);
 }
 
 .dim-row:last-child {
@@ -433,7 +435,7 @@ export default {
 
 .dim-label {
 	font-size: 28rpx;
-	color: #2D2A26;
+	color: var(--fg);
 	font-weight: 500;
 }
 
@@ -450,13 +452,13 @@ export default {
 .error-title {
 	font-size: 32rpx;
 	font-weight: 600;
-	color: #2D2A26;
+	color: var(--fg);
 	margin-bottom: 8rpx;
 }
 
 .error-hint {
 	font-size: 26rpx;
-	color: #7A756F;
+	color: var(--text-secondary);
 	margin-bottom: 32rpx;
 }
 

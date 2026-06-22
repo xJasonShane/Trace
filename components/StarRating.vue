@@ -9,7 +9,7 @@
 			<Icon
 				name="star"
 				:size="starSize"
-				:color="i <= modelValue ? '#D9A54A' : '#E0DCD7'"
+				:color="i <= modelValue ? '#D9A54A' : inactiveStarColor"
 				:fill="i <= modelValue ? '#D9A54A' : 'none'"
 				:strokeWidth="0.8"
 			/>
@@ -20,10 +20,12 @@
 
 <script>
 import Icon from './Icon.vue'
+import themeMixin from '@/mixins/theme.js'
 
 export default {
 	name: 'StarRating',
 	components: { Icon },
+	mixins: [themeMixin],
 	props: {
 		modelValue: {
 			type: Number,
@@ -47,6 +49,9 @@ export default {
 		starSize() {
 			const sizes = { sm: 24, md: 32, lg: 44 }
 			return sizes[this.size] || 32
+		},
+		inactiveStarColor() {
+			return this.themeClass === 'theme-dark' ? '#44403C' : '#E0DCD7'
 		}
 	},
 	methods: {

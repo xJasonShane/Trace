@@ -57,7 +57,7 @@ export default {
 	justify-content: center;
 	border: 4rpx solid transparent;
 	transition: all 0.2s ease;
-	background: rgba(45, 42, 38, 0.07);
+	background: var(--input-bg);
 }
 
 .mood-dot.active {

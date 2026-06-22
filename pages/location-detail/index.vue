@@ -1,5 +1,5 @@
 <template>
-	<view class="page">
+	<view class="page" :class="themeClass">
 		<!-- Hero 区域 -->
 		<view class="hero">
 			<view class="status-bar-spacer" :style="{ height: statusBarHeight + 'px' }"></view>
@@ -10,10 +10,10 @@
 				</view>
 				<view class="hero-nav">
 					<view class="nav-btn" @tap="goBack">
-						<Icon name="back" :size="32" color="#2D2A26" :strokeWidth="2" />
+						<Icon name="back" :size="32" :color="themeFgColor" :strokeWidth="2" />
 					</view>
 					<view class="nav-btn" @tap="showMore">
-						<Icon name="more" :size="32" color="#2D2A26" :strokeWidth="2" />
+						<Icon name="more" :size="32" :color="themeFgColor" :strokeWidth="2" />
 					</view>
 				</view>
 			</view>
@@ -71,7 +71,7 @@
 			</view>
 			<view v-if="journals.length === 0" class="empty-state">
 				<view class="empty-icon">
-					<Icon name="emptyJournal" :size="72" color="#A5A09A" :strokeWidth="1.4" />
+					<Icon name="emptyJournal" :size="72" :color="themeTertiaryColor" :strokeWidth="1.4" />
 				</view>
 				<text class="empty-title">还没有手账记录</text>
 				<text class="empty-hint">点击右下角按钮，记录第一篇手账</text>
@@ -98,9 +98,11 @@ import StarRating from '@/components/StarRating.vue'
 import { useJournalStore } from '@/store/journal.js'
 import { useLocationStore } from '@/store/location.js'
 import dateUtil from '@/utils/date.js'
+import themeMixin from '@/mixins/theme.js'
 
 export default {
 	components: { Icon, StarRating },
+	mixins: [themeMixin],
 	data() {
 		return {
 			journalStore: useJournalStore(),
@@ -211,7 +213,7 @@ export default {
 <style lang="scss" scoped>
 .page {
 	min-height: 100vh;
-	background: #FAF8F5;
+	background: var(--bg);
 	padding-bottom: 200rpx;
 }
 
@@ -277,14 +279,14 @@ export default {
 .info-title {
 	font-size: 40rpx;
 	font-weight: 600;
-	color: #2D2A26;
+	color: var(--fg);
 	letter-spacing: -0.02em;
 	margin-bottom: 8rpx;
 }
 
 .info-sub {
 	font-size: 26rpx;
-	color: #7A756F;
+	color: var(--text-secondary);
 	margin-bottom: 20rpx;
 }
 
@@ -306,12 +308,12 @@ export default {
 /* 统计卡片 */
 .stats-card {
 	display: flex;
-	background: #FFFFFF;
-	border: 1rpx solid #EDEAE5;
+	background: var(--surface);
+	border: 1rpx solid var(--border);
 	border-radius: 28rpx;
 	padding: 28rpx 0;
 	margin: 24rpx 32rpx 0;
-	box-shadow: 0 2rpx 16rpx rgba(0, 0, 0, 0.06);
+	box-shadow: 0 2rpx 16rpx var(--shadow);
 }
 
 .stat {
@@ -321,7 +323,7 @@ export default {
 }
 
 .stat + .stat {
-	border-left: 1rpx solid #EDEAE5;
+	border-left: 1rpx solid var(--border);
 }
 
 .stat-val {
@@ -336,7 +338,7 @@ export default {
 
 .stat-lbl {
 	font-size: 22rpx;
-	color: #7A756F;
+	color: var(--text-secondary);
 	margin-top: 8rpx;
 	font-weight: 500;
 	display: block;
@@ -350,7 +352,7 @@ export default {
 .section-label {
 	font-size: 32rpx;
 	font-weight: 600;
-	color: #2D2A26;
+	color: var(--fg);
 	margin-bottom: 20rpx;
 	padding-left: 8rpx;
 	display: flex;
@@ -373,7 +375,7 @@ export default {
 	gap: 20rpx;
 	align-items: flex-start;
 	padding: 24rpx 0;
-	border-bottom: 1rpx solid #EDEAE5;
+	border-bottom: 1rpx solid var(--border);
 }
 
 .journal-item:last-child {
@@ -422,7 +424,7 @@ export default {
 .ji-title {
 	font-size: 28rpx;
 	font-weight: 600;
-	color: #2D2A26;
+	color: var(--fg);
 	margin-bottom: 6rpx;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -431,7 +433,7 @@ export default {
 
 .ji-excerpt {
 	font-size: 24rpx;
-	color: #7A756F;
+	color: var(--text-secondary);
 	overflow: hidden;
 	text-overflow: ellipsis;
 	display: -webkit-box;
@@ -442,7 +444,7 @@ export default {
 
 .ji-date {
 	font-size: 22rpx;
-	color: #A5A09A;
+	color: var(--text-tertiary);
 	margin-top: 8rpx;
 }
 
@@ -460,7 +462,7 @@ export default {
 	width: 120rpx;
 	height: 120rpx;
 	border-radius: 50%;
-	background: rgba(45, 42, 38, 0.05);
+	background: var(--input-bg);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -470,13 +472,13 @@ export default {
 .empty-title {
 	font-size: 30rpx;
 	font-weight: 600;
-	color: #2D2A26;
+	color: var(--fg);
 	margin-bottom: 8rpx;
 }
 
 .empty-hint {
 	font-size: 24rpx;
-	color: #7A756F;
+	color: var(--text-secondary);
 }
 
 /* 错误状态 */
@@ -492,13 +494,13 @@ export default {
 .error-title {
 	font-size: 32rpx;
 	font-weight: 600;
-	color: #2D2A26;
+	color: var(--fg);
 	margin-bottom: 8rpx;
 }
 
 .error-hint {
 	font-size: 26rpx;
-	color: #7A756F;
+	color: var(--text-secondary);
 	margin-bottom: 32rpx;
 }
 

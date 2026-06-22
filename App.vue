@@ -33,6 +33,45 @@ page {
 	line-height: 1.5;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   主题 CSS 变量
+   在各页面根 view (.page) 上绑定 :class="themeClass" 切换
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 白天模式（默认） */
+.page {
+	--bg: #FAF8F5;
+	--fg: #2D2A26;
+	--surface: #FFFFFF;
+	--surface-alt: #F5F2EE;
+	--border: #EDEAE5;
+	--border-light: #E0DCD7;
+	--primary: #E09080;
+	--text-secondary: #7A756F;
+	--text-tertiary: #A5A09A;
+	--shadow: rgba(0, 0, 0, 0.06);
+	--shadow-strong: rgba(0, 0, 0, 0.10);
+	--overlay: rgba(250, 248, 245, 0.96);
+	--input-bg: rgba(45, 42, 38, 0.07);
+}
+
+/* 黑夜模式 */
+.page.theme-dark {
+	--bg: #1A1816;
+	--fg: #E8E4E0;
+	--surface: #2A2724;
+	--surface-alt: #322E2B;
+	--border: #3A3734;
+	--border-light: #44403C;
+	--primary: #E09080;
+	--text-secondary: #A5A09A;
+	--text-tertiary: #6E6A65;
+	--shadow: rgba(0, 0, 0, 0.3);
+	--shadow-strong: rgba(0, 0, 0, 0.4);
+	--overlay: rgba(26, 24, 22, 0.96);
+	--input-bg: rgba(255, 255, 255, 0.08);
+}
+
 /* 通用工具类 */
 .flex { display: flex; }
 .flex-col { display: flex; flex-direction: column; }

@@ -14,18 +14,20 @@
 			class="photo-slot empty"
 			@tap="addPhoto"
 		>
-			<Icon name="plus" :size="44" color="#A5A09A" :strokeWidth="1.6" />
+			<Icon name="plus" :size="44" :color="themeTertiaryColor" :strokeWidth="1.6" />
 		</view>
 	</view>
 </template>
 
 <script>
 import Icon from './Icon.vue'
+import themeMixin from '@/mixins/theme.js'
 import imageUtil from '../utils/image.js'
 
 export default {
 	name: 'PhotoUpload',
 	components: { Icon },
+	mixins: [themeMixin],
 	props: {
 		modelValue: {
 			type: Array,
@@ -100,12 +102,12 @@ export default {
 }
 
 .photo-slot.empty {
-	border: 3rpx dashed #E0DCD7;
-	background: rgba(45, 42, 38, 0.07);
+	border: 3rpx dashed var(--border-light);
+	background: var(--input-bg);
 }
 
 .photo-slot.filled {
-	border: 1rpx solid #EDEAE5;
+	border: 1rpx solid var(--border);
 }
 
 .photo-img {

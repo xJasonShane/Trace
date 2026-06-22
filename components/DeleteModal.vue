@@ -57,7 +57,7 @@ export default {
 }
 
 .modal-box {
-	background: #FFFFFF;
+	background: var(--surface);
 	border-radius: 32rpx;
 	padding: 48rpx 40rpx 32rpx;
 	width: 520rpx;
@@ -81,13 +81,13 @@ export default {
 .modal-title {
 	font-size: 32rpx;
 	font-weight: 600;
-	color: #2D2A26;
+	color: var(--fg);
 	margin-bottom: 12rpx;
 }
 
 .modal-desc {
 	font-size: 26rpx;
-	color: #7A756F;
+	color: var(--text-secondary);
 	text-align: center;
 	line-height: 1.4;
 	margin-bottom: 36rpx;
@@ -109,8 +109,8 @@ export default {
 }
 
 .modal-btn-cancel {
-	background: #FFFFFF;
-	border: 1rpx solid #E0DCD7;
+	background: var(--surface);
+	border: 1rpx solid var(--border-light);
 }
 
 .modal-btn-danger {
@@ -120,7 +120,7 @@ export default {
 .modal-btn-text {
 	font-size: 28rpx;
 	font-weight: 500;
-	color: #2D2A26;
+	color: var(--fg);
 }
 
 .modal-btn-text-danger {

@@ -1,7 +1,7 @@
 <template>
 	<view class="empty-state">
 		<view class="empty-icon">
-			<Icon :name="icon" :size="72" color="#A5A09A" :strokeWidth="1.4" />
+			<Icon :name="icon" :size="72" :color="themeTertiaryColor" :strokeWidth="1.4" />
 		</view>
 		<text class="empty-title">{{ title }}</text>
 		<text class="empty-desc">{{ description }}</text>
@@ -13,10 +13,12 @@
 
 <script>
 import Icon from './Icon.vue'
+import themeMixin from '@/mixins/theme.js'
 
 export default {
 	name: 'EmptyState',
 	components: { Icon },
+	mixins: [themeMixin],
 	props: {
 		icon: {
 			type: String,
@@ -54,7 +56,7 @@ export default {
 	width: 160rpx;
 	height: 160rpx;
 	border-radius: 50%;
-	background: rgba(45, 42, 38, 0.07);
+	background: var(--input-bg);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -64,13 +66,13 @@ export default {
 .empty-title {
 	font-size: 32rpx;
 	font-weight: 600;
-	color: #2D2A26;
+	color: var(--fg);
 	margin-bottom: 12rpx;
 }
 
 .empty-desc {
 	font-size: 26rpx;
-	color: #7A756F;
+	color: var(--text-secondary);
 	line-height: 1.5;
 	margin-bottom: 40rpx;
 	max-width: 440rpx;

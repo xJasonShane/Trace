@@ -1,5 +1,5 @@
 <template>
-	<view class="page">
+	<view class="page" :class="themeClass">
 		<!-- 状态栏占位 -->
 		<view class="statusbar-placeholder" :style="{ height: statusBarHeight + 'px' }"></view>
 
@@ -7,13 +7,13 @@
 		<view class="list-header">
 			<text class="list-title">我的手账</text>
 			<view class="list-search" @tap="goSearch">
-				<Icon name="search" :size="30" color="#A5A09A" :strokeWidth="2" />
+				<Icon name="search" :size="30" :color="searchIconColor" :strokeWidth="2" />
 				<text class="list-search-text">搜索手账…</text>
 			</view>
 		</view>
 
 		<!-- 筛选标签栏 -->
-		<scroll-view class="filter-bar" scroll-x>
+		<scroll-view class="filter-bar" scroll-x :show-scrollbar="false">
 			<view
 				v-for="f in filters"
 				:key="f.value"
@@ -77,11 +77,13 @@
 import TabBar from '@/components/TabBar.vue'
 import Icon from '@/components/Icon.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import themeMixin from '@/mixins/theme.js'
 import { useJournalStore } from '@/store/journal.js'
 import dateUtil from '@/utils/date.js'
 
 export default {
 	components: { TabBar, Icon, EmptyState },
+	mixins: [themeMixin],
 	setup() {
 		const journalStore = useJournalStore()
 		return { journalStore }
@@ -99,6 +101,9 @@ export default {
 		}
 	},
 	computed: {
+		searchIconColor() {
+			return this.themeClass === 'theme-dark' ? '#6E6A65' : '#A5A09A'
+		},
 		filteredJournals() {
 			const all = this.journalStore.sortedJournals
 			if (this.currentFilter === 'recent') {
@@ -159,7 +164,7 @@ export default {
 	height: 100vh;
 	display: flex;
 	flex-direction: column;
-	background: #FAF8F5;
+	background: var(--bg);
 }
 
 .statusbar-placeholder {
@@ -175,7 +180,7 @@ export default {
 	display: block;
 	font-size: 44rpx;
 	font-weight: 600;
-	color: #2D2A26;
+	color: var(--fg);
 	letter-spacing: -0.02em;
 	margin-bottom: 16rpx;
 }
@@ -184,14 +189,14 @@ export default {
 	display: flex;
 	align-items: center;
 	gap: 16rpx;
-	background: rgba(45, 42, 38, 0.07);
+	background: var(--input-bg);
 	border-radius: 20rpx;
 	padding: 16rpx 24rpx;
 }
 
 .list-search-text {
 	font-size: 28rpx;
-	color: #A5A09A;
+	color: var(--text-tertiary);
 }
 
 .filter-bar {
@@ -205,10 +210,10 @@ export default {
 	padding: 8rpx 24rpx;
 	margin-right: 12rpx;
 	border-radius: 999rpx;
-	border: 1rpx solid #E0DCD7;
+	border: 1rpx solid var(--border-light);
 	background: transparent;
 	font-size: 24rpx;
-	color: #7A756F;
+	color: var(--text-secondary);
 }
 
 .filter-item.active {
@@ -220,7 +225,8 @@ export default {
 
 .content {
 	flex: 1;
-	overflow: auto;
+	overflow-x: hidden;
+	overflow-y: auto;
 }
 
 .list-body {
@@ -235,7 +241,7 @@ export default {
 	display: block;
 	font-size: 24rpx;
 	font-weight: 600;
-	color: #7A756F;
+	color: var(--text-secondary);
 	margin: 20rpx 0 12rpx;
 	letter-spacing: 0.02em;
 }
@@ -243,12 +249,12 @@ export default {
 .list-card {
 	display: flex;
 	gap: 20rpx;
-	background: #FFFFFF;
-	border: 1rpx solid #EDEAE5;
+	background: var(--surface);
+	border: 1rpx solid var(--border);
 	border-radius: 28rpx;
 	padding: 20rpx;
 	margin-bottom: 16rpx;
-	box-shadow: 0 2rpx 16rpx rgba(0, 0, 0, 0.06);
+	box-shadow: 0 2rpx 16rpx var(--shadow);
 }
 
 .lc-thumb {
@@ -278,17 +284,17 @@ export default {
 .lc-title {
 	font-size: 30rpx;
 	font-weight: 600;
-	color: #2D2A26;
+	color: var(--fg);
 }
 
 .lc-loc {
 	font-size: 24rpx;
-	color: #7A756F;
+	color: var(--text-secondary);
 }
 
 .lc-date {
 	font-size: 22rpx;
-	color: #A5A09A;
+	color: var(--text-tertiary);
 	margin-top: 4rpx;
 }
 

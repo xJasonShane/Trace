@@ -1,5 +1,5 @@
 <template>
-	<view class="page">
+	<view class="page" :class="themeClass">
 		<!-- 状态栏占位 -->
 		<view class="statusbar" :style="{ height: statusBarHeight + 'px' }"></view>
 
@@ -28,40 +28,40 @@
 			<!-- 表单 -->
 			<view class="edit-form">
 				<!-- 昵称 -->
-				<view class="form-group">
-					<text class="form-label">昵称</text>
-					<input
-						class="form-input"
-						v-model="form.nickname"
-						placeholder="请输入昵称"
-						placeholder-style="color: #A5A09A;"
-						maxlength="20"
-					/>
-				</view>
+			<view class="form-group">
+				<text class="form-label">昵称</text>
+				<input
+					class="form-input"
+					v-model="form.nickname"
+					placeholder="请输入昵称"
+					:placeholder-style="placeholderStyle"
+					maxlength="20"
+				/>
+			</view>
 
-				<!-- 个性签名 -->
-				<view class="form-group">
-					<text class="form-label">个性签名</text>
-					<textarea
-						class="form-textarea"
-						v-model="form.bio"
-						placeholder="记录你的心情…"
-						placeholder-style="color: #A5A09A;"
-						maxlength="50"
-						:auto-height="false"
-					/>
-				</view>
+			<!-- 个性签名 -->
+			<view class="form-group">
+				<text class="form-label">个性签名</text>
+				<textarea
+					class="form-textarea"
+					v-model="form.bio"
+					placeholder="记录你的心情…"
+					:placeholder-style="placeholderStyle"
+					maxlength="50"
+					:auto-height="false"
+				/>
+			</view>
 
-				<!-- 所在城市 -->
-				<view class="form-group">
-					<text class="form-label">所在城市</text>
-					<input
-						class="form-input"
-						v-model="form.city"
-						placeholder="请输入所在城市"
-						placeholder-style="color: #A5A09A;"
-						maxlength="20"
-					/>
+			<!-- 所在城市 -->
+			<view class="form-group">
+				<text class="form-label">所在城市</text>
+				<input
+					class="form-input"
+					v-model="form.city"
+					placeholder="请输入所在城市"
+					:placeholder-style="placeholderStyle"
+					maxlength="20"
+				/>
 				</view>
 
 				<!-- 生日 -->
@@ -86,17 +86,28 @@
 				</view>
 			</view>
 		</scroll-view>
+
+		<!-- 头像裁剪弹窗 -->
+		<ImageCropper
+			:visible="showCropper"
+			:imageSrc="cropImageSrc"
+			@confirm="onCropConfirm"
+			@cancel="onCropCancel"
+		/>
 	</view>
 </template>
 
 <script>
 import Icon from '@/components/Icon.vue'
+import ImageCropper from '@/components/ImageCropper.vue'
 import { useProfileStore } from '@/store/profile.js'
 import imageUtil from '@/utils/image.js'
 import dateUtil from '@/utils/date.js'
+import themeMixin from '@/mixins/theme.js'
 
 export default {
-	components: { Icon },
+	components: { Icon, ImageCropper },
+	mixins: [themeMixin],
 	data() {
 		return {
 			statusBarHeight: 20,
@@ -108,8 +119,8 @@ export default {
 				avatar: ''
 			},
 			saving: false,
-			fg: '#2D2A26',
-			fgTertiary: '#A5A09A',
+			showCropper: false,
+			cropImageSrc: '',
 			strokeWarm: '#C09080',
 			white: '#FFFFFF'
 		}
@@ -117,6 +128,15 @@ export default {
 	computed: {
 		today() {
 			return dateUtil.formatDate(new Date())
+		},
+		fg() {
+			return this.themeClass === 'theme-dark' ? '#E8E4E0' : '#2D2A26'
+		},
+		fgTertiary() {
+			return this.themeClass === 'theme-dark' ? '#6E6A65' : '#A5A09A'
+		},
+		placeholderStyle() {
+			return this.themeClass === 'theme-dark' ? 'color: #6E6A65;' : 'color: #A5A09A;'
 		}
 	},
 	onLoad() {
@@ -139,18 +159,33 @@ export default {
 		},
 		async onAvatarTap() {
 			try {
-				uni.showLoading({ title: '处理中…' })
-				const paths = await imageUtil.pickAndSaveImages(1)
-				uni.hideLoading()
-				if (paths && paths.length > 0) {
-					this.form.avatar = paths[0]
+				const tempPaths = await imageUtil.chooseImage(1)
+				if (tempPaths && tempPaths.length > 0) {
+					this.cropImageSrc = tempPaths[0]
+					this.showCropper = true
 				}
 			} catch (e) {
-				uni.hideLoading()
 				if (e && e.errMsg && e.errMsg.indexOf('cancel') === -1) {
 					uni.showToast({ title: '选择头像失败', icon: 'none' })
 				}
 			}
+		},
+		async onCropConfirm(croppedPath) {
+			this.showCropper = false
+			this.cropImageSrc = ''
+			try {
+				uni.showLoading({ title: '保存中…' })
+				const savedPath = await imageUtil.saveFile(croppedPath)
+				this.form.avatar = savedPath
+			} catch (e) {
+				this.form.avatar = croppedPath
+			} finally {
+				uni.hideLoading()
+			}
+		},
+		onCropCancel() {
+			this.showCropper = false
+			this.cropImageSrc = ''
 		},
 		onBirthdayChange(e) {
 			this.form.birthday = e.detail.value
@@ -183,7 +218,7 @@ export default {
 <style lang="scss" scoped>
 .page {
 	min-height: 100vh;
-	background: #FAF8F5;
+	background: var(--bg);
 	display: flex;
 	flex-direction: column;
 }
@@ -207,13 +242,13 @@ export default {
 	align-items: center;
 	justify-content: center;
 	border-radius: 20rpx;
-	background: rgba(45, 42, 38, 0.07);
+	background: var(--input-bg);
 }
 
 .title {
 	font-size: 32rpx;
 	font-weight: 600;
-	color: #2D2A26;
+	color: var(--fg);
 	letter-spacing: -0.01em;
 }
 
@@ -287,7 +322,7 @@ export default {
 	display: block;
 	font-size: 26rpx;
 	font-weight: 600;
-	color: #6E6A65;
+	color: var(--text-secondary);
 	margin-bottom: 12rpx;
 }
 
@@ -296,24 +331,24 @@ export default {
 	padding: 24rpx 28rpx;
 	min-height: 88rpx;
 	line-height: 1.5;
-	border: 1rpx solid #E0DCD7;
+	border: 1rpx solid var(--border-light);
 	border-radius: 20rpx;
 	font-size: 28rpx;
 	font-family: -apple-system, 'PingFang SC', sans-serif;
-	background: #FFFFFF;
-	color: #2D2A26;
+	background: var(--surface);
+	color: var(--fg);
 	box-sizing: border-box;
 }
 
 .form-textarea {
 	width: 100%;
 	padding: 24rpx 28rpx;
-	border: 1rpx solid #E0DCD7;
+	border: 1rpx solid var(--border-light);
 	border-radius: 20rpx;
 	font-size: 28rpx;
 	font-family: -apple-system, 'PingFang SC', sans-serif;
-	background: #FFFFFF;
-	color: #2D2A26;
+	background: var(--surface);
+	color: var(--fg);
 	min-height: 120rpx;
 	line-height: 1.6;
 	box-sizing: border-box;
@@ -326,7 +361,7 @@ export default {
 }
 
 .picker-placeholder {
-	color: #A5A09A;
+	color: var(--text-tertiary);
 	font-size: 28rpx;
 }
 

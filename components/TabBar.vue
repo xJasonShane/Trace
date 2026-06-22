@@ -1,5 +1,5 @@
 <template>
-	<view class="tabbar">
+	<view class="tabbar" :class="{ 'tabbar-fixed': fixed, 'tabbar-static': !fixed }">
 		<view
 			v-for="(tab, index) in tabs"
 			:key="index"
@@ -29,6 +29,12 @@ export default {
 		active: {
 			type: Number,
 			default: 0
+		},
+		// 是否使用 fixed 定位。在含原生组件（如 map）的页面中应设为 false，
+		// 作为 flex 子元素布局，避免被原生组件覆盖。
+		fixed: {
+			type: Boolean,
+			default: true
 		}
 	},
 	data() {
@@ -52,16 +58,28 @@ export default {
 
 <style lang="scss" scoped>
 .tabbar {
-	position: fixed;
-	bottom: 0;
-	left: 0;
-	right: 0;
 	display: flex;
 	padding: 12rpx 16rpx 0;
 	padding-bottom: env(safe-area-inset-bottom);
 	border-top: 1rpx solid #EDEAE5;
 	background: rgba(250, 248, 245, 0.96);
+}
+
+/* fixed 模式：浮动定位，适用于无原生组件的普通页面 */
+.tabbar-fixed {
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	right: 0;
 	z-index: 100;
+}
+
+/* static 模式：作为 flex 子元素，适用于含原生组件（如 map）的页面，
+   避免被原生组件层级覆盖 */
+.tabbar-static {
+	position: relative;
+	flex-shrink: 0;
+	width: 100%;
 }
 
 .tab {

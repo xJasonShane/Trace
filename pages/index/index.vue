@@ -15,39 +15,37 @@
 				show-location
 			></map>
 
-			<!-- 搜索栏 -->
-			<view class="map-search" @tap="goSearch">
-				<view class="map-search-inner">
-					<Icon name="search" :size="32" color="#A5A09A" :strokeWidth="2" />
-					<text class="map-search-text">搜索地点或回忆…</text>
-				</view>
-			</view>
+			<!-- 搜索栏（使用 cover-view 覆盖原生 map 组件） -->
+			<cover-view class="map-search" @tap="goSearch">
+				<cover-image class="map-search-icon" :src="iconSrc('search', '#A5A09A', 2)" />
+				<cover-view class="map-search-text">搜索地点或回忆…</cover-view>
+			</cover-view>
 
 			<!-- 定位按钮 -->
-			<view class="locate-btn" @tap="locate">
-				<Icon name="locate" :size="36" color="#6E6A65" :strokeWidth="2" />
-			</view>
+			<cover-view class="locate-btn" @tap="locate">
+				<cover-image class="locate-icon" :src="iconSrc('locate', '#6E6A65', 2)" />
+			</cover-view>
 
 			<!-- 底部信息卡片 -->
-			<view v-if="selectedLocation" class="map-card" @tap="goLocationDetail">
-				<view class="mc-row">
-					<view class="mc-thumb" :class="'ph-' + (selectedLocation.coverColor || 'warm')">
-						<Icon name="mountain" :size="32" color="#FFFFFF" :strokeWidth="1.4" />
-					</view>
-					<view class="mc-info">
-						<text class="mc-name">{{ selectedLocation.name }}</text>
-						<text class="mc-sub">{{ selectedLocation.journalCount || 0 }} 篇手账 · 最近 {{ lastVisitText }}</text>
-						<view class="mc-rating">
-							<text class="mc-score">5.0</text>
-							<StarRating :modelValue="5" size="sm" readonly />
-						</view>
-					</view>
-				</view>
-			</view>
+			<cover-view v-if="selectedLocation" class="map-card" @tap="goLocationDetail">
+				<cover-view class="mc-row">
+					<cover-view class="mc-thumb" :class="'ph-' + (selectedLocation.coverColor || 'warm')">
+						<cover-image class="mc-thumb-icon" :src="iconSrc('mountain', '#FFFFFF', 1.4)" />
+					</cover-view>
+					<cover-view class="mc-info">
+						<cover-view class="mc-name">{{ selectedLocation.name }}</cover-view>
+						<cover-view class="mc-sub">{{ selectedLocation.journalCount || 0 }} 篇手账 · 最近 {{ lastVisitText }}</cover-view>
+						<cover-view class="mc-rating">
+							<cover-view class="mc-score">5.0</cover-view>
+							<cover-view class="mc-stars">★★★★★</cover-view>
+						</cover-view>
+					</cover-view>
+				</cover-view>
+			</cover-view>
 		</view>
 
-		<!-- TabBar -->
-		<TabBar :active="0" />
+		<!-- TabBar（非 fixed 模式，作为 flex 子元素避免被原生 map 覆盖） -->
+		<TabBar :active="0" :fixed="false" />
 	</view>
 </template>
 
@@ -57,6 +55,13 @@ import Icon from '@/components/Icon.vue'
 import StarRating from '@/components/StarRating.vue'
 import { useLocationStore } from '@/store/location.js'
 import dateUtil from '@/utils/date.js'
+
+// cover-view 内部无法使用自定义组件，需内联 SVG 图标路径
+const COVER_ICONS = {
+	search: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+	locate: '<circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/>',
+	mountain: '<path d="M3 20l5.5-9 4 6 3-4.5 5.5 7.5z"/><circle cx="17" cy="7" r="2.5"/>'
+}
 
 export default {
 	components: { TabBar, Icon, StarRating },
@@ -120,6 +125,12 @@ export default {
 		}
 	},
 	methods: {
+		// 生成 SVG data URI，供 cover-image 使用
+		iconSrc(name, color, strokeWidth) {
+			const paths = COVER_ICONS[name] || ''
+			const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${color}' stroke-width='${strokeWidth}' stroke-linecap='round' stroke-linejoin='round'>${paths}</svg>`
+			return 'data:image/svg+xml,' + encodeURIComponent(svg)
+		},
 		onMarkerTap(e) {
 			const markerId = e.detail.markerId
 			const idx = markerId - 1
@@ -167,6 +178,7 @@ export default {
 	flex-shrink: 0;
 }
 
+/* 地图区域：flex:1 占据剩余空间，与 TabBar 各自独立，互不覆盖 */
 .map-area {
 	flex: 1;
 	position: relative;
@@ -178,30 +190,35 @@ export default {
 	height: 100%;
 }
 
+/* 搜索栏 —— cover-view 覆盖在原生 map 上 */
 .map-search {
 	position: absolute;
 	top: 24rpx;
 	left: 32rpx;
 	right: 32rpx;
 	z-index: 3;
-}
-
-.map-search-inner {
 	display: flex;
+	flex-direction: row;
 	align-items: center;
-	gap: 16rpx;
 	background: #FFFFFF;
 	border: 1rpx solid #EDEAE5;
 	border-radius: 24rpx;
 	padding: 18rpx 24rpx;
-	box-shadow: 0 12rpx 48rpx rgba(0, 0, 0, 0.10);
+}
+
+.map-search-icon {
+	width: 32rpx;
+	height: 32rpx;
+	margin-right: 16rpx;
 }
 
 .map-search-text {
 	font-size: 28rpx;
 	color: #A5A09A;
+	line-height: 1.5;
 }
 
+/* 定位按钮 —— cover-view */
 .locate-btn {
 	position: absolute;
 	right: 32rpx;
@@ -215,12 +232,17 @@ export default {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	box-shadow: 0 2rpx 16rpx rgba(0, 0, 0, 0.06);
 }
 
+.locate-icon {
+	width: 36rpx;
+	height: 36rpx;
+}
+
+/* 底部信息卡片 —— cover-view */
 .map-card {
 	position: absolute;
-	bottom: 152rpx;
+	bottom: 32rpx;
 	left: 32rpx;
 	right: 32rpx;
 	z-index: 3;
@@ -228,13 +250,12 @@ export default {
 	border: 1rpx solid #EDEAE5;
 	border-radius: 36rpx;
 	padding: 24rpx;
-	box-shadow: 0 12rpx 48rpx rgba(0, 0, 0, 0.10);
 }
 
 .mc-row {
 	display: flex;
+	flex-direction: row;
 	align-items: center;
-	gap: 20rpx;
 }
 
 .mc-thumb {
@@ -244,45 +265,58 @@ export default {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	flex-shrink: 0;
+	margin-right: 20rpx;
 }
 
-.mc-thumb.ph-warm { background: linear-gradient(135deg, #EDCFC6, #D9AFA2); }
-.mc-thumb.ph-blue { background: linear-gradient(135deg, #BDD3E8, #9DBBD8); }
-.mc-thumb.ph-lavender { background: linear-gradient(135deg, #D2C5E2, #B5A8CE); }
-.mc-thumb.ph-green { background: linear-gradient(135deg, #C0D9B8, #9EC594); }
-.mc-thumb.ph-gold { background: linear-gradient(135deg, #E2D4B8, #CEBC98); }
+/* cover-view 在部分小程序平台不支持 linear-gradient，使用纯色保证兼容 */
+.mc-thumb.ph-warm { background: #E3BFB4; }
+.mc-thumb.ph-blue { background: #ADC8E0; }
+.mc-thumb.ph-lavender { background: #C4B6D8; }
+.mc-thumb.ph-green { background: #AFCFA6; }
+.mc-thumb.ph-gold { background: #D8C5A8; }
+
+.mc-thumb-icon {
+	width: 32rpx;
+	height: 32rpx;
+}
 
 .mc-info {
 	flex: 1;
-	min-width: 0;
 	display: flex;
 	flex-direction: column;
-	gap: 4rpx;
 }
 
 .mc-name {
 	font-size: 30rpx;
 	font-weight: 600;
 	color: #2D2A26;
+	line-height: 1.5;
 }
 
 .mc-sub {
 	font-size: 24rpx;
 	color: #7A756F;
+	line-height: 1.5;
+	margin-top: 4rpx;
 }
 
 .mc-rating {
 	display: flex;
+	flex-direction: row;
 	align-items: center;
-	gap: 16rpx;
 	margin-top: 4rpx;
 }
 
 .mc-score {
-	font-family: ui-monospace, 'SF Mono', monospace;
 	font-size: 30rpx;
 	font-weight: 700;
 	color: #D9A54A;
+	margin-right: 16rpx;
+}
+
+.mc-stars {
+	font-size: 22rpx;
+	color: #D9A54A;
+	letter-spacing: 2rpx;
 }
 </style>

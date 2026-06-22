@@ -293,7 +293,9 @@ export default {
 
 .form-input {
 	width: 100%;
-	padding: 20rpx 24rpx;
+	padding: 24rpx 28rpx;
+	min-height: 88rpx;
+	line-height: 1.5;
 	border: 1rpx solid #E0DCD7;
 	border-radius: 20rpx;
 	font-size: 28rpx;
@@ -305,7 +307,7 @@ export default {
 
 .form-textarea {
 	width: 100%;
-	padding: 20rpx 24rpx;
+	padding: 24rpx 28rpx;
 	border: 1rpx solid #E0DCD7;
 	border-radius: 20rpx;
 	font-size: 28rpx;

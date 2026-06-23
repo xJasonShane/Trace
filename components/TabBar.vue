@@ -69,6 +69,7 @@ export default {
 <style lang="scss" scoped>
 .tabbar {
 	display: flex;
+	box-sizing: border-box;
 	padding: 12rpx 16rpx 0;
 	padding-bottom: env(safe-area-inset-bottom);
 	border-top: 1rpx solid var(--border);

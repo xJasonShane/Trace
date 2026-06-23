@@ -33,6 +33,11 @@ page {
 	line-height: 1.5;
 }
 
+/* 全局盒模型：border-box 防止 padding 导致宽度溢出 */
+view, text, image, scroll-view, input, textarea, button {
+	box-sizing: border-box;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    主题 CSS 变量
    在各页面根 view (.page) 上绑定 :class="themeClass" 切换

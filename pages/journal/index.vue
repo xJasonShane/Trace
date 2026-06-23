@@ -165,6 +165,7 @@ export default {
 	display: flex;
 	flex-direction: column;
 	background: var(--bg);
+	overflow-x: hidden;
 }
 
 .statusbar-placeholder {

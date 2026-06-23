@@ -149,10 +149,7 @@ export default {
 		this.loaded = true
 	},
 	onShow() {
-		// 从编辑页返回时刷新数据
-		if (this.locationId) {
-			this.locationStore.$persist && this.locationStore.$persist()
-		}
+		// 从编辑页返回时，computed 属性会自动响应 store 变化刷新数据
 	},
 	methods: {
 		goBack() {

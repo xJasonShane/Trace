@@ -127,7 +127,7 @@ export default {
 			return this.locationStore.totalCount
 		},
 		photoCount() {
-			return this.profileStore.photoCount
+			return this.journalStore.totalPhotos
 		},
 		consecutiveDays() {
 			return this.journalStore.consecutiveDays

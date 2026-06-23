@@ -127,9 +127,13 @@ export default {
 			return groups
 		}
 	},
-	onLoad() {
+	onLoad(options) {
 		const sys = uni.getSystemInfoSync()
 		this.statusBarHeight = sys.statusBarHeight || 20
+		// 支持从"我的页面"跳转时携带筛选条件
+		if (options && options.filter && this.filters.some(f => f.value === options.filter)) {
+			this.currentFilter = options.filter
+		}
 	},
 	onShow() {
 		// 数据从 store 获取，自动响应式更新

@@ -16,17 +16,17 @@
 
 			<!-- 统计数字 -->
 			<view class="profile-stats">
-				<view class="ps">
+				<view class="ps" hover-class="ps-hover" :hover-stay-time="80" @tap="goJournals">
 					<text class="pv">{{ journalCount }}</text>
 					<text class="pl">手账</text>
 				</view>
 				<view class="ps-divider"></view>
-				<view class="ps">
+				<view class="ps" hover-class="ps-hover" :hover-stay-time="80" @tap="goLocations">
 					<text class="pv">{{ locationCount }}</text>
 					<text class="pl">地点</text>
 				</view>
 				<view class="ps-divider"></view>
-				<view class="ps">
+				<view class="ps" hover-class="ps-hover" :hover-stay-time="80" @tap="goPhotos">
 					<text class="pv">{{ photoCount }}</text>
 					<text class="pl">照片</text>
 				</view>
@@ -135,7 +135,7 @@ export default {
 			return this.locationStore.totalCount
 		},
 		photoCount() {
-			return this.profileStore.photoCount
+			return this.journalStore.totalPhotos
 		}
 	},
 	onLoad() {
@@ -145,6 +145,18 @@ export default {
 	methods: {
 		toggleNotify() {
 			this.profileStore.saveSettings({ notifications: !this.settings.notifications })
+		},
+		// 跳转到手账列表页
+		goJournals() {
+			uni.navigateTo({ url: '/pages/journal/index' })
+		},
+		// 跳转到搜索页，展示全部地点
+		goLocations() {
+			uni.navigateTo({ url: '/pages/search/index?filter=location' })
+		},
+		// 跳转到手账列表页，仅展示有照片的手账
+		goPhotos() {
+			uni.navigateTo({ url: '/pages/journal/index?filter=photos' })
 		},
 		goEdit() {
 			uni.navigateTo({ url: '/pages/profile-edit/index' })
@@ -244,6 +256,11 @@ export default {
 	display: flex;
 	flex-direction: column;
 	gap: 4rpx;
+	border-radius: 16rpx;
+}
+
+.ps-hover {
+	opacity: 0.6;
 }
 
 .ps-divider {

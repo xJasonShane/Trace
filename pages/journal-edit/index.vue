@@ -237,9 +237,9 @@ export default {
 		save() {
 			if (!this.validate()) return
 
-			// 查找或创建地点
+			// 确定关联地点：优先使用已传入的 locationId，否则按名称查找或创建
 			let locationId = this.locationId
-			if (this.form.locationName.trim()) {
+			if (!locationId && this.form.locationName.trim()) {
 				const loc = this.locationStore.findOrCreate({
 					name: this.form.locationName.trim()
 				})
@@ -265,7 +265,7 @@ export default {
 			}
 
 			if (saved) {
-				// 更新地点统计
+				// 更新地点统计（手账数、照片数、最近到访日期）
 				if (locationId) {
 					const journals = this.journalStore.getJournalsByLocation(locationId)
 					const photoCount = journals.reduce(

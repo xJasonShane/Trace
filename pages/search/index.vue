@@ -42,8 +42,8 @@
 		<!-- 结果区域 -->
 		<view class="search-results">
 			<!-- 结果数量 -->
-			<view v-if="keyword && resultList.length > 0" class="search-count">
-				找到 {{ resultList.length }} 条结果
+			<view v-if="resultList.length > 0" class="search-count">
+				{{ activeFilter === 'location' && !keyword ? '共 ' + resultList.length + ' 个地点' : '找到 ' + resultList.length + ' 条结果' }}
 			</view>
 
 			<!-- 结果列表 -->
@@ -94,7 +94,7 @@
 			</view>
 
 			<!-- 空结果 -->
-			<view v-if="keyword && resultList.length === 0 && searched" class="empty-state">
+			<view v-if="resultList.length === 0 && searched" class="empty-state">
 				<view class="empty-icon">
 					<Icon name="search" :size="72" :color="fgTertiary" :stroke-width="1.4" />
 				</view>
@@ -103,7 +103,7 @@
 			</view>
 
 			<!-- 初始状态 -->
-			<view v-if="!keyword" class="empty-state">
+			<view v-if="!keyword && resultList.length === 0 && !searched" class="empty-state">
 				<view class="empty-icon">
 					<Icon name="search" :size="72" :color="fgTertiary" :stroke-width="1.4" />
 				</view>
@@ -165,9 +165,17 @@ export default {
 		const sysInfo = uni.getSystemInfoSync()
 		this.statusBarHeight = sysInfo.statusBarHeight || 20
 
+		// 支持从"我的页面"跳转时携带筛选条件
+		if (options && options.filter && this.filterTabs.some(t => t.key === options.filter)) {
+			this.activeFilter = options.filter
+		}
+
 		if (options && options.keyword) {
 			this.keyword = decodeURIComponent(options.keyword)
 			this.doSearch()
+		} else if (this.activeFilter === 'location') {
+			// 无关键词但要求展示地点列表时，加载全部地点
+			this.loadAllLocations()
 		} else {
 			this.autoFocus = true
 		}
@@ -192,18 +200,28 @@ export default {
 		onClear() {
 			this.keyword = ''
 			this.journalResults = []
-			this.locationResults = []
 			this.tagResults = []
 			this.searched = false
-			this.autoFocus = true
+			// 地点筛选下清空关键词时，保留全部地点列表
+			if (this.activeFilter === 'location') {
+				this.loadAllLocations()
+			} else {
+				this.locationResults = []
+				this.autoFocus = true
+			}
 		},
 		doSearch() {
 			const kw = this.keyword.trim()
 			if (!kw) {
 				this.journalResults = []
-				this.locationResults = []
 				this.tagResults = []
-				this.searched = false
+				// 地点筛选下无关键词时，展示全部地点
+				if (this.activeFilter === 'location') {
+					this.loadAllLocations()
+				} else {
+					this.locationResults = []
+				}
+				this.searched = this.activeFilter === 'location'
 				return
 			}
 			const journalStore = useJournalStore()
@@ -259,6 +277,34 @@ export default {
 		},
 		onFilter(key) {
 			this.activeFilter = key
+			if (key === 'location') {
+				// 切换到地点筛选：无关键词时展示全部地点，有关键词时重新搜索
+				if (!this.keyword.trim()) {
+					this.loadAllLocations()
+				} else {
+					this.doSearch()
+				}
+			} else {
+				// 切换到非地点筛选：无关键词时清空地点结果，避免在"全部"下误显
+				if (!this.keyword.trim()) {
+					this.locationResults = []
+					this.searched = false
+				}
+			}
+		},
+		// 加载全部地点（无关键词时用于地点列表展示）
+		loadAllLocations() {
+			const locationStore = useLocationStore()
+			this.locationResults = locationStore.locations.map(l => ({
+				id: l.id,
+				type: 'location',
+				title: l.name || '',
+				subtitle: l.address || (l.journalCount ? l.journalCount + ' 篇手账' : '暂无手账'),
+				date: l.lastVisitDate ? dateUtil.formatDateDot(l.lastVisitDate) : '',
+				coverColor: l.coverColor || 'warm',
+				raw: l
+			}))
+			this.searched = true
 		},
 		onBack() {
 			uni.navigateBack()

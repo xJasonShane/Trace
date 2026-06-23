@@ -225,7 +225,7 @@ interface Location {
   "name": "拾光手账",
   "appid": "__UNI__XXXXX",
   "description": "地图生活手账应用",
-  "versionName": "1.0.0",
+  "versionName": "0.0.1",
   "versionCode": 100
 }
 ```

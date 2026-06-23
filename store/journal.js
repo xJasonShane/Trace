@@ -141,7 +141,7 @@ export const useJournalStore = defineStore('journal', {
 				},
 				overallRating: data.ratings ? calcOverall(data.ratings) : 5,
 				tags: data.tags || [],
-				createdAt: now,
+				createdAt: data.createdAt || now,
 				updatedAt: now
 			}
 			this.journals.unshift(journal)

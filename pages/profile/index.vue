@@ -73,7 +73,7 @@
 						<Icon name="upload" :size="34" color="#FFFFFF" :strokeWidth="1.8" />
 					</view>
 					<text class="settings-label">数据备份</text>
-					<text class="settings-meta">{{ settings.backup ? '已开启' : '未开启' }}</text>
+					<text class="settings-meta">{{ backupMeta }}</text>
 					<view class="settings-arrow">
 						<Icon name="arrowRight" :size="28" :color="themeTertiaryColor" :strokeWidth="2" />
 					</view>
@@ -83,7 +83,7 @@
 						<Icon name="info" :size="34" color="#FFFFFF" :strokeWidth="1.8" />
 					</view>
 					<text class="settings-label">关于拾光</text>
-					<text class="settings-meta">v1.0.0</text>
+					<text class="settings-meta">v0.0.1</text>
 					<view class="settings-arrow">
 						<Icon name="arrowRight" :size="28" :color="themeTertiaryColor" :strokeWidth="2" />
 					</view>
@@ -106,6 +106,8 @@ import themeMixin from '@/mixins/theme.js'
 import { useProfileStore } from '@/store/profile.js'
 import { useJournalStore } from '@/store/journal.js'
 import { useLocationStore } from '@/store/location.js'
+import storage from '@/utils/storage.js'
+import dateUtil from '@/utils/date.js'
 
 export default {
 	components: { TabBar, Icon },
@@ -118,7 +120,9 @@ export default {
 	},
 	data() {
 		return {
-			statusBarHeight: 0
+			statusBarHeight: 0,
+			backing: false,
+			backupTick: 0
 		}
 	},
 	computed: {
@@ -136,6 +140,13 @@ export default {
 		},
 		photoCount() {
 			return this.journalStore.totalPhotos
+		},
+		backupMeta() {
+			// 引用 backupTick 建立响应式依赖，确保备份/恢复后重新计算
+			void this.backupTick
+			const info = storage.getBackupInfo()
+			if (!info.exists) return '未备份'
+			return dateUtil.formatDateDot(info.timestamp)
 		}
 	},
 	onLoad() {
@@ -175,12 +186,75 @@ export default {
 			})
 		},
 		goBackup() {
-			uni.showToast({ title: '备份功能开发中', icon: 'none' })
+			if (this.backing) return
+			const info = storage.getBackupInfo()
+			const actions = ['立即备份']
+			if (info.exists) {
+				actions.push('恢复备份')
+			}
+			uni.showActionSheet({
+				itemList: actions,
+				success: (res) => {
+					if (res.tapIndex === 0) {
+						this.doBackup()
+					} else if (res.tapIndex === 1 && info.exists) {
+						this.confirmRestore()
+					}
+				}
+			})
+		},
+		doBackup() {
+			this.backing = true
+			uni.showLoading({ title: '备份中…' })
+			setTimeout(() => {
+				const result = storage.createBackup()
+				uni.hideLoading()
+				this.backing = false
+				if (result.success) {
+					this.profileStore.saveSettings({ backup: true })
+					this.backupTick++
+					uni.showToast({ title: '备份成功', icon: 'success' })
+				} else {
+					uni.showToast({ title: result.message, icon: 'none' })
+				}
+			}, 300)
+		},
+		confirmRestore() {
+			const info = storage.getBackupInfo()
+			const dateStr = info.exists ? dateUtil.formatDateDot(info.timestamp) : ''
+			uni.showModal({
+				title: '恢复备份',
+				content: `将从 ${dateStr} 的备份恢复数据，当前数据将被覆盖。确定继续吗？`,
+				confirmText: '恢复',
+				confirmColor: '#E09080',
+				success: (res) => {
+					if (res.confirm) {
+						this.doRestore()
+					}
+				}
+			})
+		},
+		doRestore() {
+			uni.showLoading({ title: '恢复中…' })
+			setTimeout(() => {
+				const result = storage.restoreBackup()
+				uni.hideLoading()
+				if (result.success) {
+					this.backupTick++
+					uni.showToast({ title: '恢复成功', icon: 'success' })
+					// 刷新页面数据
+					setTimeout(() => {
+						uni.reLaunch({ url: '/pages/profile/index' })
+					}, 1200)
+				} else {
+					uni.showToast({ title: result.message, icon: 'none' })
+				}
+			}, 300)
 		},
 		goAbout() {
 			uni.showModal({
 				title: '关于拾光',
-				content: '拾光手账 v1.0.0\n用脚步丈量世界，用手账记录时光',
+				content: '拾光手账 v0.0.1\n用脚步丈量世界，用手账记录时光',
 				showCancel: false
 			})
 		}

@@ -36,7 +36,26 @@
 					placeholder="选择或搜索地点…"
 					placeholder-class="input-placeholder"
 					maxlength="30"
+					@input="onLocationInput"
+					@focus="onLocationFocus"
+					@blur="onLocationBlur"
 				/>
+				<!-- 地点搜索建议下拉 -->
+				<view v-if="showSuggestions && locationSuggestions.length > 0" class="loc-suggestions">
+					<view
+						v-for="loc in locationSuggestions"
+						:key="loc.id"
+						class="loc-suggestion-item"
+						@tap="selectLocation(loc)"
+					>
+						<text class="loc-sug-name">{{ loc.name }}</text>
+						<text v-if="loc.address" class="loc-sug-addr">{{ loc.address }}</text>
+					</view>
+				</view>
+				<!-- 验证提示 -->
+				<view v-if="locationWarning" class="loc-warning">
+					<text>{{ locationWarning }}</text>
+				</view>
 			</view>
 
 			<!-- 内容 -->
@@ -50,6 +69,17 @@
 					maxlength="2000"
 					:auto-height="false"
 				/>
+			</view>
+
+			<!-- 日期 -->
+			<view class="form-group">
+				<text class="form-label">日期</text>
+				<picker mode="date" :value="form.date" @change="onDateChange">
+					<view class="date-picker">
+						<text class="date-text">{{ form.date || '选择日期' }}</text>
+						<Icon name="arrowRight" :size="28" :color="themeTertiaryColor" :strokeWidth="2" />
+					</view>
+				</picker>
 			</view>
 
 			<!-- 照片 -->
@@ -120,6 +150,7 @@ import PhotoUpload from '@/components/PhotoUpload.vue'
 import themeMixin from '@/mixins/theme.js'
 import { useJournalStore } from '@/store/journal.js'
 import { useLocationStore } from '@/store/location.js'
+import dateUtil from '@/utils/date.js'
 
 export default {
 	components: { Icon, StarRating, MoodSelect, PhotoUpload },
@@ -132,12 +163,16 @@ export default {
 			journalId: '',
 			locationId: '',
 			statusBarHeight: 0,
+			showSuggestions: false,
+			locationWarning: '',
+			validatedLocationId: '',
 			form: {
 				title: '',
 				locationName: '',
 				content: '',
 				photos: [],
 				mood: '😊',
+				date: '',
 				ratings: {
 					environment: 5,
 					scenery: 5,
@@ -157,6 +192,8 @@ export default {
 	onLoad(options) {
 		const systemInfo = uni.getSystemInfoSync()
 		this.statusBarHeight = systemInfo.statusBarHeight || 20
+		// 默认日期为当天
+		this.form.date = dateUtil.formatDate(new Date())
 
 		if (options && options.id) {
 			// 编辑模式
@@ -166,7 +203,17 @@ export default {
 		} else if (options && options.locationId) {
 			// 从地点详情跳转来，预填地点
 			this.locationId = options.locationId
+			this.validatedLocationId = options.locationId
 			this.loadLocation()
+		}
+	},
+	computed: {
+		locationSuggestions() {
+			const kw = this.form.locationName.trim().toLowerCase()
+			if (!kw) return []
+			return this.locationStore.locations
+				.filter(l => l.name.toLowerCase().includes(kw))
+				.slice(0, 5)
 		}
 	},
 	methods: {
@@ -178,6 +225,10 @@ export default {
 				this.form.content = journal.content || ''
 				this.form.photos = journal.photos ? [...journal.photos] : []
 				this.form.mood = journal.mood || '😊'
+				// 从已有 createdAt 中提取日期部分（YYYY-MM-DD）
+				if (journal.createdAt) {
+					this.form.date = journal.createdAt.substring(0, 10)
+				}
 				this.form.ratings = {
 					environment: 5,
 					scenery: 5,
@@ -187,6 +238,7 @@ export default {
 				}
 				this.form.tags = journal.tags ? [...journal.tags] : []
 				this.locationId = journal.locationId || ''
+				this.validatedLocationId = journal.locationId || ''
 			} else {
 				uni.showToast({ title: '手账不存在', icon: 'none' })
 				setTimeout(() => this.goBack(), 1500)
@@ -196,10 +248,66 @@ export default {
 			const loc = this.locationStore.getLocation(this.locationId)
 			if (loc) {
 				this.form.locationName = loc.name
+				this.validatedLocationId = loc.id
 			}
+		},
+		onLocationInput() {
+			this.showSuggestions = true
+			this.validatedLocationId = ''
+			this.locationWarning = ''
+		},
+		onLocationFocus() {
+			this.showSuggestions = true
+		},
+		onLocationBlur() {
+			// 延迟关闭建议，确保 tap 事件先触发
+			setTimeout(() => {
+				this.showSuggestions = false
+				this.validateLocationField()
+			}, 200)
+		},
+		selectLocation(loc) {
+			this.form.locationName = loc.name
+			this.locationId = loc.id
+			this.validatedLocationId = loc.id
+			this.showSuggestions = false
+			this.locationWarning = ''
+		},
+		validateLocationField() {
+			const name = this.form.locationName.trim()
+			if (!name) {
+				this.locationWarning = ''
+				return true
+			}
+			// 已选中有效地点
+			if (this.validatedLocationId) {
+				this.locationWarning = ''
+				return true
+			}
+			// 检查是否精确匹配已有地点
+			const exactMatch = this.locationStore.locations.find(
+				l => l.name === name
+			)
+			if (exactMatch) {
+				this.validatedLocationId = exactMatch.id
+				this.locationId = exactMatch.id
+				this.locationWarning = ''
+				return true
+			}
+			// 未匹配到已有地点，给出修正建议
+			const suggestions = this.locationSuggestions
+			if (suggestions.length > 0) {
+				this.locationWarning = `未找到「${name}」，是否指：${suggestions[0].name}？`
+			} else {
+				this.locationWarning = `「${name}」不在已有地点列表中，请从建议中选择或前往地图添加`
+			}
+			return false
 		},
 		updateRating(key, value) {
 			this.form.ratings[key] = value
+		},
+		onDateChange(e) {
+			this.form.date = e.detail.value
 		},
 		addTag() {
 			uni.showModal({
@@ -232,19 +340,23 @@ export default {
 				uni.showToast({ title: '请输入内容', icon: 'none' })
 				return false
 			}
+			// 地点验证：如果填了地点但未通过验证，阻止提交
+			if (this.form.locationName.trim() && !this.validateLocationField()) {
+				uni.showToast({ title: '请选择有效的地点', icon: 'none' })
+				return false
+			}
 			return true
 		},
 		save() {
 			if (!this.validate()) return
 
-			// 确定关联地点：优先使用已传入的 locationId，否则按名称查找或创建
-			let locationId = this.locationId
-			if (!locationId && this.form.locationName.trim()) {
-				const loc = this.locationStore.findOrCreate({
-					name: this.form.locationName.trim()
-				})
-				locationId = loc.id
-			}
+			// 确定关联地点：仅使用已验证的 locationId
+			let locationId = this.validatedLocationId || this.locationId
+
+			// 将用户选择的日期与当前时间组合为完整时间戳
+			const now = new Date()
+			const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0')
+			const createdAt = this.form.date + ' ' + timeStr
 
 			const data = {
 				title: this.form.title.trim(),
@@ -253,6 +365,7 @@ export default {
 				content: this.form.content.trim(),
 				photos: this.form.photos,
 				mood: this.form.mood,
+				createdAt,
 				ratings: { ...this.form.ratings },
 				tags: [...this.form.tags]
 			}
@@ -378,6 +491,55 @@ export default {
 	font-size: 28rpx;
 }
 
+/* 地点搜索建议 */
+.loc-suggestions {
+	background: var(--surface);
+	border: 1rpx solid var(--border);
+	border-radius: 20rpx;
+	box-shadow: 0 4rpx 20rpx var(--shadow);
+	overflow: hidden;
+	margin-top: 12rpx;
+}
+
+.loc-suggestion-item {
+	padding: 20rpx 28rpx;
+	border-bottom: 1rpx solid var(--border);
+	display: flex;
+	flex-direction: column;
+	gap: 4rpx;
+}
+
+.loc-suggestion-item:last-child {
+	border-bottom: none;
+}
+
+.loc-suggestion-item:active {
+	background: var(--input-bg);
+}
+
+.loc-sug-name {
+	font-size: 28rpx;
+	color: var(--fg);
+	font-weight: 500;
+}
+
+.loc-sug-addr {
+	font-size: 24rpx;
+	color: var(--text-secondary);
+}
+
+/* 地点验证警告 */
+.loc-warning {
+	margin-top: 12rpx;
+	padding: 16rpx 24rpx;
+	background: rgba(221, 184, 106, 0.12);
+	border: 1rpx solid rgba(221, 184, 106, 0.3);
+	border-radius: 16rpx;
+	font-size: 24rpx;
+	color: #B89048;
+	line-height: 1.5;
+}
+
 .form-textarea {
 	width: 100%;
 	padding: 24rpx 28rpx;
@@ -389,6 +551,24 @@ export default {
 	min-height: 240rpx;
 	line-height: 1.6;
 	box-sizing: border-box;
+}
+
+/* 日期选择器 */
+.date-picker {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 24rpx 28rpx;
+	min-height: 88rpx;
+	border: 1rpx solid var(--border-light);
+	border-radius: 20rpx;
+	background: var(--surface);
+	box-sizing: border-box;
+}
+
+.date-text {
+	font-size: 28rpx;
+	color: var(--fg);
 }
 
 /* 评分维度 */

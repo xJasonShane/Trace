@@ -21,11 +21,6 @@
 				<cover-view class="map-search-text" :style="coverSubStyle">搜索地点或回忆…</cover-view>
 			</cover-view>
 
-			<!-- 定位按钮 —— 使用强调色背景，确保在地图上清晰可见 -->
-			<cover-view class="locate-btn" :style="locateBtnStyle" @tap="locate">
-				<cover-image class="locate-icon" :src="iconSrc('locate', '#FFFFFF', 2)" />
-			</cover-view>
-
 			<!-- 底部信息卡片 —— 有手账记录时显示精简预览 -->
 			<cover-view v-if="selectedLocation" class="map-card" :style="coverBoxStyle" @tap="goLocationDetail">
 				<cover-view class="mc-row">
@@ -43,6 +38,7 @@
 					</cover-view>
 				</cover-view>
 			</cover-view>
+
 		</view>
 
 		<!-- TabBar（非 fixed 模式，作为 flex 子元素避免被原生 map 覆盖） -->
@@ -62,77 +58,7 @@ import dateUtil from '@/utils/date.js'
 // cover-view 内部无法使用自定义组件，需内联 SVG 图标路径
 const COVER_ICONS = {
 	search: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
-	locate: '<circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/>',
 	mountain: '<path d="M3 20l5.5-9 4 6 3-4.5 5.5 7.5z"/><circle cx="17" cy="7" r="2.5"/>'
-}
-
-// 默认示例地点（首次启动时写入 store，确保所有页面可访问）
-const DEFAULT_LOCATIONS = [
-	{ id: 'demo1', name: '西湖断桥', latitude: 30.26, longitude: 120.15, coverColor: 'warm', address: '杭州市西湖区北山街' },
-	{ id: 'demo2', name: '太子湾公园', latitude: 30.23, longitude: 120.13, coverColor: 'blue', address: '杭州市西湖区南山路' },
-	{ id: 'demo3', name: '灵隐寺', latitude: 30.24, longitude: 120.10, coverColor: 'lavender', address: '杭州市西湖区灵隐路' }
-]
-
-// 默认示例手账（与示例地点关联，确保各页面数据一致）
-const DEFAULT_JOURNALS = [
-	{
-		id: 'demo_j1',
-		locationId: 'demo1',
-		locationName: '西湖断桥',
-		title: '断桥残雪，冬日西湖',
-		content: '冬日的西湖格外宁静，断桥上覆盖着薄薄的积雪。站在桥上远眺，湖面如镜，远山朦胧，仿佛置身水墨画中。偶尔有几只水鸟掠过湖面，留下淡淡的涟漪。',
-		photos: [],
-		mood: '😊',
-		ratings: { environment: 5, scenery: 5, transport: 4, experience: 5 },
-		tags: ['冬日', '雪景', '西湖'],
-		createdAt: '2024-12-15 10:30',
-		updatedAt: '2024-12-15 10:30'
-	},
-	{
-		id: 'demo_j2',
-		locationId: 'demo1',
-		locationName: '西湖断桥',
-		title: '春日断桥漫步',
-		content: '春天来了，断桥两岸的柳树抽出新芽，桃花盛开。沿着白堤漫步，微风拂面，花香沁人。湖面上游船点点，远处的雷峰塔在夕阳下熠熠生辉。',
-		photos: [],
-		mood: '🌸',
-		ratings: { environment: 5, scenery: 4, transport: 4, experience: 5 },
-		tags: ['春日', '漫步', '花季'],
-		createdAt: '2024-03-20 14:00',
-		updatedAt: '2024-03-20 14:00'
-	},
-	{
-		id: 'demo_j3',
-		locationId: 'demo2',
-		locationName: '太子湾公园',
-		title: '郁金香花海',
-		content: '太子湾公园的郁金香开了，大片大片的花海让人陶醉。红的、黄的、紫的、粉的，色彩缤纷。微风吹过，花海起伏如波浪，空气中弥漫着淡淡的花香。',
-		photos: [],
-		mood: '☀️',
-		ratings: { environment: 5, scenery: 5, transport: 3, experience: 4 },
-		tags: ['花海', '郁金香', '春日'],
-		createdAt: '2024-03-28 09:15',
-		updatedAt: '2024-03-28 09:15'
-	},
-	{
-		id: 'demo_j4',
-		locationId: 'demo3',
-		locationName: '灵隐寺',
-		title: '古刹禅意',
-		content: '清晨的灵隐寺，香烟袅袅，钟声悠扬。沿着石阶而上，古木参天，斑驳的树影洒在青石板上。飞来峰的石窟造像庄严精美，让人感叹古人的智慧与匠心。',
-		photos: [],
-		mood: '🌙',
-		ratings: { environment: 5, scenery: 4, transport: 3, experience: 5 },
-		tags: ['古刹', '禅意', '人文'],
-		createdAt: '2024-07-08 08:00',
-		updatedAt: '2024-07-08 08:00'
-	}
-]
-
-// 计算综合评分
-function calcOverall(ratings) {
-	const vals = Object.values(ratings)
-	return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10
 }
 
 export default {
@@ -153,10 +79,6 @@ export default {
 	computed: {
 		searchIconColor() {
 			return this.themeClass === 'theme-dark' ? '#6E6A65' : '#A5A09A'
-		},
-		// 定位按钮使用强调色背景，保证在地图各种背景下均清晰可见
-		locateBtnStyle() {
-			return 'background: #E09080; border: 1rpx solid #D08878; box-shadow: 0 4rpx 16rpx rgba(224, 144, 128, 0.35);'
 		},
 		coverBoxStyle() {
 			if (this.themeClass === 'theme-dark') {
@@ -239,38 +161,6 @@ export default {
 	onLoad() {
 		const sys = uni.getSystemInfoSync()
 		this.statusBarHeight = sys.statusBarHeight || 20
-
-		const isFirstLaunch = this.locationStore.locations.length === 0
-
-		// 首次启动时初始化示例地点
-		if (isFirstLaunch) {
-			DEFAULT_LOCATIONS.forEach(loc => {
-				this.locationStore.addLocation(loc)
-			})
-		}
-
-		// 首次启动时初始化示例手账，并同步地点统计
-		if (isFirstLaunch && this.journalStore.journals.length === 0) {
-			DEFAULT_JOURNALS.forEach(j => {
-				const journal = {
-					...j,
-					overallRating: calcOverall(j.ratings)
-				}
-				this.journalStore.journals.push(journal)
-			})
-			this.journalStore.persist()
-
-			// 同步各地点的手账数、照片数、最近到访日期
-			DEFAULT_LOCATIONS.forEach(loc => {
-				const journals = this.journalStore.getJournalsByLocation(loc.id)
-				if (journals.length > 0) {
-					const photoCount = journals.reduce(
-						(sum, j) => sum + (j.photos ? j.photos.length : 0), 0
-					)
-					this.locationStore.updateStats(loc.id, journals.length, photoCount)
-				}
-			})
-		}
 	},
 	onShow() {
 		// 从二级页面返回时，刷新选中地点数据（手账可能已变更）
@@ -327,17 +217,6 @@ export default {
 			if (this.selectedLocation) {
 				uni.navigateTo({ url: '/pages/location-detail/index?id=' + this.selectedLocation.id })
 			}
-		},
-		locate() {
-			uni.getLocation({
-				type: 'gcj02',
-				success: (res) => {
-					this.center = { latitude: res.latitude, longitude: res.longitude }
-				},
-				fail: () => {
-					uni.showToast({ title: '获取定位失败', icon: 'none' })
-				}
-			})
 		}
 	}
 }
@@ -397,25 +276,6 @@ export default {
 	font-size: 28rpx;
 	color: #A5A09A;
 	line-height: 1.5;
-}
-
-/* 定位按钮 —— cover-view，使用强调色背景 */
-.locate-btn {
-	position: absolute;
-	right: 32rpx;
-	bottom: 300rpx;
-	z-index: 3;
-	width: 80rpx;
-	height: 80rpx;
-	border-radius: 24rpx;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
-
-.locate-icon {
-	width: 36rpx;
-	height: 36rpx;
 }
 
 /* 底部信息卡片 —— cover-view */

@@ -143,13 +143,20 @@ export default {
 	onLoad(options) {
 		const systemInfo = uni.getSystemInfoSync()
 		this.statusBarHeight = systemInfo.statusBarHeight || 20
+		// 重置状态，避免上一次的预设数据残留
+		this.locationId = ''
+		this.loaded = false
 		if (options && options.id) {
 			this.locationId = options.id
 		}
 		this.loaded = true
 	},
 	onShow() {
-		// 从编辑页返回时，computed 属性会自动响应 store 变化刷新数据
+		// 从编辑页返回时，校验当前地点是否仍然存在，避免显示已删除地点的残留数据
+		if (this.locationId && !this.locationStore.getLocation(this.locationId)) {
+			this.locationId = ''
+			this.loaded = true
+		}
 	},
 	methods: {
 		goBack() {

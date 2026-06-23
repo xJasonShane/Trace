@@ -76,8 +76,14 @@ async function pickAndSaveImages(count = 9) {
 
 	for (const tempPath of tempPaths) {
 		const compressedPath = await compressImage(tempPath)
-		const savedPath = await saveFile(compressedPath)
-		savedPaths.push(savedPath)
+		try {
+			const savedPath = await saveFile(compressedPath)
+			savedPaths.push(savedPath)
+		} catch (e) {
+			// saveFile 失败时回退到压缩后的临时路径，确保照片不丢失
+			console.warn('保存图片失败，使用临时路径:', e)
+			savedPaths.push(compressedPath)
+		}
 	}
 
 	return savedPaths

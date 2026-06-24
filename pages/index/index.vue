@@ -318,7 +318,7 @@ export default {
 	background: #FFFFFF;
 	border: 1rpx solid #EDEAE5;
 	border-radius: 24rpx;
-	padding: 18rpx 24rpx;
+	padding: 24rpx 32rpx;
 }
 
 .map-search-icon {
@@ -330,7 +330,7 @@ export default {
 .map-search-text {
 	font-size: 28rpx;
 	color: #A5A09A;
-	line-height: 1.5;
+	line-height: 32rpx;
 }
 
 /* 定位按钮 */

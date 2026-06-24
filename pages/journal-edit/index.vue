@@ -33,13 +33,24 @@
 				<input
 					class="form-input"
 					v-model="form.locationName"
-					placeholder="选择或搜索地点…"
+					placeholder="输入地点名、地图选点或定位…"
 					placeholder-class="input-placeholder"
 					maxlength="30"
 					@input="onLocationInput"
 					@focus="onLocationFocus"
 					@blur="onLocationBlur"
 				/>
+				<!-- 地点操作按钮 -->
+				<view class="loc-actions">
+					<view class="loc-action-btn" @tap="chooseMapLocation">
+						<Icon name="map" :size="30" color="#7FA3C8" :strokeWidth="1.8" />
+						<text>地图选点</text>
+					</view>
+					<view class="loc-action-btn" @tap="getCurrentLocation">
+						<Icon name="locate" :size="30" color="#7FA3C8" :strokeWidth="1.8" />
+						<text>当前位置</text>
+					</view>
+				</view>
 				<!-- 地点搜索建议下拉 -->
 				<view v-if="showSuggestions && locationSuggestions.length > 0" class="loc-suggestions">
 					<view
@@ -52,9 +63,14 @@
 						<text v-if="loc.address" class="loc-sug-addr">{{ loc.address }}</text>
 					</view>
 				</view>
-				<!-- 验证提示 -->
+				<!-- 新地点提示 -->
 				<view v-if="locationWarning" class="loc-warning">
 					<text>{{ locationWarning }}</text>
+				</view>
+				<!-- 位置信息标签 -->
+				<view v-if="form.locationLat && form.locationLng" class="loc-info-tag">
+					<Icon name="locate" :size="26" color="#7FA3C8" :strokeWidth="1.8" />
+					<text>{{ form.locationLat.toFixed(6) }}, {{ form.locationLng.toFixed(6) }}</text>
 				</view>
 			</view>
 
@@ -169,6 +185,9 @@ export default {
 			form: {
 				title: '',
 				locationName: '',
+				locationLat: 0,
+				locationLng: 0,
+				locationAddress: '',
 				content: '',
 				photos: [],
 				mood: '😊',
@@ -181,6 +200,7 @@ export default {
 				},
 				tags: []
 			},
+			locating: false,
 			ratingDimensions: [
 				{ key: 'environment', label: '环境' },
 				{ key: 'scenery', label: '风景' },
@@ -195,13 +215,24 @@ export default {
 		// 默认日期为当天
 		this.form.date = dateUtil.formatDate(new Date())
 
+		// 从地图点选/长按跳转来，携带坐标
+		if (options && options.lat && options.lng) {
+			this.form.locationLat = parseFloat(options.lat)
+			this.form.locationLng = parseFloat(options.lng)
+			this.form.locationName = options.name || ''
+			this.form.locationAddress = options.address || ''
+			if (options.name) {
+				this.validatedLocationId = options.locationId || ''
+			}
+		}
+
 		if (options && options.id) {
 			// 编辑模式
 			this.isEdit = true
 			this.journalId = options.id
 			this.loadJournal()
-		} else if (options && options.locationId) {
-			// 从地点详情跳转来，预填地点
+		} else if (options && options.locationId && !options.lat) {
+			// 从地点详情跳转来，预填地点（排除带坐标的情况）
 			this.locationId = options.locationId
 			this.validatedLocationId = options.locationId
 			this.loadLocation()
@@ -239,6 +270,13 @@ export default {
 				this.form.tags = journal.tags ? [...journal.tags] : []
 				this.locationId = journal.locationId || ''
 				this.validatedLocationId = journal.locationId || ''
+				// 加载关联地点的坐标信息
+				const loc = this.locationStore.getLocation(journal.locationId)
+				if (loc) {
+					this.form.locationLat = loc.latitude || 0
+					this.form.locationLng = loc.longitude || 0
+					this.form.locationAddress = loc.address || ''
+				}
 			} else {
 				uni.showToast({ title: '手账不存在', icon: 'none' })
 				setTimeout(() => this.goBack(), 1500)
@@ -248,6 +286,9 @@ export default {
 			const loc = this.locationStore.getLocation(this.locationId)
 			if (loc) {
 				this.form.locationName = loc.name
+				this.form.locationLat = loc.latitude || 0
+				this.form.locationLng = loc.longitude || 0
+				this.form.locationAddress = loc.address || ''
 				this.validatedLocationId = loc.id
 			}
 		},
@@ -268,10 +309,81 @@ export default {
 		},
 		selectLocation(loc) {
 			this.form.locationName = loc.name
+			this.form.locationLat = loc.latitude || 0
+			this.form.locationLng = loc.longitude || 0
+			this.form.locationAddress = loc.address || ''
 			this.locationId = loc.id
 			this.validatedLocationId = loc.id
 			this.showSuggestions = false
 			this.locationWarning = ''
+		},
+		// 打开地图选点
+		chooseMapLocation() {
+			uni.chooseLocation({
+				success: (res) => {
+					if (res.name) {
+						this.form.locationName = res.name
+						this.form.locationAddress = res.address || ''
+						this.form.locationLat = res.latitude || 0
+						this.form.locationLng = res.longitude || 0
+						// 查找或创建地点
+						const loc = this.locationStore.findOrCreate({
+							name: res.name,
+							address: res.address || '',
+							latitude: res.latitude,
+							longitude: res.longitude
+						})
+						this.locationId = loc.id
+						this.validatedLocationId = loc.id
+						this.locationWarning = ''
+						this.showSuggestions = false
+					}
+				},
+				fail: (err) => {
+					if (err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+						uni.showToast({ title: '地图选点失败，请确认已配置地图Key', icon: 'none' })
+					}
+				}
+			})
+		},
+		// 获取当前位置
+		getCurrentLocation() {
+			if (this.locating) return
+			this.locating = true
+			uni.showLoading({ title: '定位中…' })
+			uni.getLocation({
+				type: 'gcj02',
+				success: (res) => {
+					uni.hideLoading()
+					this.locating = false
+					this.form.locationLat = res.latitude || 0
+					this.form.locationLng = res.longitude || 0
+					this.form.locationAddress = ''
+					this.form.locationName = this.form.locationName || '我的位置'
+					// 尝试查找已有地点
+					const nearLoc = this.locationStore.locations.find(l =>
+						Math.abs(l.latitude - res.latitude) < 0.001 &&
+						Math.abs(l.longitude - res.longitude) < 0.001
+					)
+					if (nearLoc) {
+						this.form.locationName = nearLoc.name
+						this.form.locationAddress = nearLoc.address || ''
+						this.locationId = nearLoc.id
+						this.validatedLocationId = nearLoc.id
+					} else {
+						this.validatedLocationId = ''
+						this.locationWarning = '已定位到当前位置，请输入地点名称'
+					}
+					this.showSuggestions = false
+				},
+				fail: (err) => {
+					uni.hideLoading()
+					this.locating = false
+					if (err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+						uni.showToast({ title: '定位失败，请检查定位权限', icon: 'none' })
+					}
+				}
+			})
 		},
 		validateLocationField() {
 			const name = this.form.locationName.trim()
@@ -294,14 +406,9 @@ export default {
 				this.locationWarning = ''
 				return true
 			}
-			// 未匹配到已有地点，给出修正建议
-			const suggestions = this.locationSuggestions
-			if (suggestions.length > 0) {
-				this.locationWarning = `未找到「${name}」，是否指：${suggestions[0].name}？`
-			} else {
-				this.locationWarning = `「${name}」不在已有地点列表中，请从建议中选择或前往地图添加`
-			}
-			return false
+			// 新地点 — 允许创建，给出确认提示
+			this.locationWarning = '将创建新地点「' + name + '」'
+			return true
 		},
 		updateRating(key, value) {
 			this.form.ratings[key] = value
@@ -350,8 +457,32 @@ export default {
 		save() {
 			if (!this.validate()) return
 
-			// 确定关联地点：仅使用已验证的 locationId
+			// 确定关联地点：使用 findOrCreate 自动创建新地点
 			let locationId = this.validatedLocationId || this.locationId
+			const locName = this.form.locationName.trim()
+
+			if (locName && !locationId) {
+				// 新地点 — 自动创建
+				const loc = this.locationStore.findOrCreate({
+					name: locName,
+					address: this.form.locationAddress || '',
+					latitude: this.form.locationLat || 0,
+					longitude: this.form.locationLng || 0
+				})
+				locationId = loc.id
+			} else if (locName && locationId) {
+				// 已有地点 — 如果坐标有变化，更新坐标
+				const loc = this.locationStore.getLocation(locationId)
+				if (loc && this.form.locationLat && this.form.locationLng) {
+					if (loc.latitude !== this.form.locationLat || loc.longitude !== this.form.locationLng) {
+						this.locationStore.updateLocation(locationId, {
+							latitude: this.form.locationLat,
+							longitude: this.form.locationLng,
+							address: this.form.locationAddress || loc.address
+						})
+					}
+				}
+			}
 
 			// 将用户选择的日期与当前时间组合为完整时间戳
 			const now = new Date()
@@ -489,6 +620,45 @@ export default {
 .input-placeholder {
 	color: var(--text-tertiary);
 	font-size: 28rpx;
+}
+
+/* 地点操作按钮 */
+.loc-actions {
+	display: flex;
+	gap: 20rpx;
+	margin-top: 16rpx;
+}
+
+.loc-action-btn {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10rpx;
+	padding: 18rpx 0;
+	background: var(--surface);
+	border: 1rpx solid var(--border-light);
+	border-radius: 20rpx;
+	font-size: 26rpx;
+	color: var(--text-secondary);
+}
+
+.loc-action-btn:active {
+	background: rgba(127, 163, 200, 0.08);
+}
+
+/* 位置坐标标签 */
+.loc-info-tag {
+	display: flex;
+	align-items: center;
+	gap: 8rpx;
+	margin-top: 12rpx;
+	padding: 12rpx 20rpx;
+	background: rgba(127, 163, 200, 0.08);
+	border-radius: 12rpx;
+	font-size: 22rpx;
+	color: #7FA3C8;
+	font-family: ui-monospace, 'SF Mono', monospace;
 }
 
 /* 地点搜索建议 */

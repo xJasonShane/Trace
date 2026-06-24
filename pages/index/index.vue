@@ -13,6 +13,7 @@
 				:scale="13"
 				@markertap="onMarkerTap"
 				@tap="onMapTap"
+				@click="onMapTap"
 				show-location
 			></map>
 
@@ -25,11 +26,6 @@
 			<!-- 定位按钮 -->
 			<cover-view class="map-locate-btn" :style="coverBoxStyle" @tap="locateCurrent">
 				<cover-image class="map-locate-icon" :src="iconSrc('locate', locateIconColor, 2)" />
-			</cover-view>
-
-			<!-- 添加地点按钮 -->
-			<cover-view class="map-add-btn" @tap="addLocationHere">
-				<cover-image class="map-add-icon" :src="iconSrc('plus', '#FFFFFF', 2.5)" />
 			</cover-view>
 
 			<!-- 底部信息卡片 —— 有手账记录时显示精简预览 -->
@@ -208,10 +204,15 @@ export default {
 		onMarkerTap(e) {
 			// 标记为 marker 点击，防止 onMapTap 误触发
 			this.markerTapPending = true
-			setTimeout(() => { this.markerTapPending = false }, 500)
+			setTimeout(() => { this.markerTapPending = false }, 300)
 
 			// 确保 markerId 为数字类型（不同平台可能返回字符串）
-			const markerId = Number(e.detail.markerId)
+			const detail = e.detail || e.mp && e.mp.detail || {}
+			const markerId = Number(detail.markerId)
+			if (isNaN(markerId)) {
+				console.warn('[onMarkerTap] 无效的 markerId:', detail.markerId)
+				return
+			}
 			const idx = markerId - 1
 			if (idx >= 0 && idx < this.displayLocations.length) {
 				const loc = this.displayLocations[idx]
@@ -229,14 +230,21 @@ export default {
 					// 有手账记录：显示精简预览卡片
 					this.selectedLocation = loc
 				}
+			} else {
+				console.warn('[onMarkerTap] marker索引越界: idx=' + idx + ', locations.length=' + this.displayLocations.length)
 			}
 		},
 		// 点击地图空白区域 — 添加新地点
 		onMapTap(e) {
 			if (this.markerTapPending) return
-			const lat = e.detail && e.detail.latitude
-			const lng = e.detail && e.detail.longitude
-			if (!lat || !lng) return
+			// 兼容不同平台的事件数据格式：uni-app 下为 e.detail，微信小程序下可能为 e.mp.detail
+			const detail = e.detail || (e.mp && e.mp.detail) || {}
+			const lat = Number(detail.latitude)
+			const lng = Number(detail.longitude)
+			if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+				console.warn('[onMapTap] 未获取到有效坐标:', detail)
+				return
+			}
 			// 跳转到新建手账页，携带坐标
 			uni.navigateTo({
 				url: '/pages/journal-edit/index?lat=' + lat + '&lng=' + lng
@@ -255,12 +263,6 @@ export default {
 				fail: () => {
 					uni.showToast({ title: '定位失败，请检查定位权限', icon: 'none' })
 				}
-			})
-		},
-		// 在当前地图中心添加地点
-		addLocationHere() {
-			uni.navigateTo({
-				url: '/pages/journal-edit/index?lat=' + this.center.latitude + '&lng=' + this.center.longitude
 			})
 		},
 		goSearch() {
@@ -350,27 +352,6 @@ export default {
 .map-locate-icon {
 	width: 36rpx;
 	height: 36rpx;
-}
-
-/* 添加地点按钮 */
-.map-add-btn {
-	position: absolute;
-	right: 32rpx;
-	bottom: 140rpx;
-	z-index: 3;
-	width: 96rpx;
-	height: 96rpx;
-	border-radius: 50%;
-	background: #E09080;
-	box-shadow: 0 8rpx 28rpx rgba(224, 144, 128, 0.4);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
-
-.map-add-icon {
-	width: 44rpx;
-	height: 44rpx;
 }
 
 /* 底部信息卡片 —— cover-view */

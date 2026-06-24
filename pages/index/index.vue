@@ -12,6 +12,7 @@
 				:markers="markers"
 				:scale="13"
 				@markertap="onMarkerTap"
+				@tap="onMapTap"
 				show-location
 			></map>
 
@@ -19,6 +20,16 @@
 			<cover-view class="map-search" :style="coverBoxStyle" @tap="goSearch">
 				<cover-image class="map-search-icon" :src="iconSrc('search', searchIconColor, 2)" />
 				<cover-view class="map-search-text" :style="coverSubStyle">搜索地点或回忆…</cover-view>
+			</cover-view>
+
+			<!-- 定位按钮 -->
+			<cover-view class="map-locate-btn" :style="coverBoxStyle" @tap="locateCurrent">
+				<cover-image class="map-locate-icon" :src="iconSrc('locate', locateIconColor, 2)" />
+			</cover-view>
+
+			<!-- 添加地点按钮 -->
+			<cover-view class="map-add-btn" @tap="addLocationHere">
+				<cover-image class="map-add-icon" :src="iconSrc('plus', '#FFFFFF', 2.5)" />
 			</cover-view>
 
 			<!-- 底部信息卡片 —— 有手账记录时显示精简预览 -->
@@ -58,7 +69,9 @@ import dateUtil from '@/utils/date.js'
 // cover-view 内部无法使用自定义组件，需内联 SVG 图标路径
 const COVER_ICONS = {
 	search: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
-	mountain: '<path d="M3 20l5.5-9 4 6 3-4.5 5.5 7.5z"/><circle cx="17" cy="7" r="2.5"/>'
+	mountain: '<path d="M3 20l5.5-9 4 6 3-4.5 5.5 7.5z"/><circle cx="17" cy="7" r="2.5"/>',
+	locate: '<circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/>',
+	plus: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>'
 }
 
 export default {
@@ -73,12 +86,16 @@ export default {
 		return {
 			statusBarHeight: 0,
 			center: { latitude: 30.27, longitude: 120.15 },
-			selectedLocation: null
+			selectedLocation: null,
+			markerTapPending: false
 		}
 	},
 	computed: {
 		searchIconColor() {
 			return this.themeClass === 'theme-dark' ? '#6E6A65' : '#A5A09A'
+		},
+		locateIconColor() {
+			return this.themeClass === 'theme-dark' ? '#A5A09A' : '#7A756F'
 		},
 		coverBoxStyle() {
 			if (this.themeClass === 'theme-dark') {
@@ -189,6 +206,10 @@ export default {
 			return 'data:image/svg+xml,' + encodeURIComponent(svg)
 		},
 		onMarkerTap(e) {
+			// 标记为 marker 点击，防止 onMapTap 误触发
+			this.markerTapPending = true
+			setTimeout(() => { this.markerTapPending = false }, 500)
+
 			// 确保 markerId 为数字类型（不同平台可能返回字符串）
 			const markerId = Number(e.detail.markerId)
 			const idx = markerId - 1
@@ -209,6 +230,38 @@ export default {
 					this.selectedLocation = loc
 				}
 			}
+		},
+		// 点击地图空白区域 — 添加新地点
+		onMapTap(e) {
+			if (this.markerTapPending) return
+			const lat = e.detail && e.detail.latitude
+			const lng = e.detail && e.detail.longitude
+			if (!lat || !lng) return
+			// 跳转到新建手账页，携带坐标
+			uni.navigateTo({
+				url: '/pages/journal-edit/index?lat=' + lat + '&lng=' + lng
+			})
+		},
+		// 定位到当前位置
+		locateCurrent() {
+			uni.getLocation({
+				type: 'gcj02',
+				success: (res) => {
+					this.center = {
+						latitude: res.latitude,
+						longitude: res.longitude
+					}
+				},
+				fail: () => {
+					uni.showToast({ title: '定位失败，请检查定位权限', icon: 'none' })
+				}
+			})
+		},
+		// 在当前地图中心添加地点
+		addLocationHere() {
+			uni.navigateTo({
+				url: '/pages/journal-edit/index?lat=' + this.center.latitude + '&lng=' + this.center.longitude
+			})
 		},
 		goSearch() {
 			uni.navigateTo({ url: '/pages/search/index' })
@@ -276,6 +329,48 @@ export default {
 	font-size: 28rpx;
 	color: #A5A09A;
 	line-height: 1.5;
+}
+
+/* 定位按钮 */
+.map-locate-btn {
+	position: absolute;
+	top: 24rpx;
+	right: 32rpx;
+	z-index: 3;
+	width: 72rpx;
+	height: 72rpx;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: #FFFFFF;
+	border: 1rpx solid #EDEAE5;
+}
+
+.map-locate-icon {
+	width: 36rpx;
+	height: 36rpx;
+}
+
+/* 添加地点按钮 */
+.map-add-btn {
+	position: absolute;
+	right: 32rpx;
+	bottom: 140rpx;
+	z-index: 3;
+	width: 96rpx;
+	height: 96rpx;
+	border-radius: 50%;
+	background: #E09080;
+	box-shadow: 0 8rpx 28rpx rgba(224, 144, 128, 0.4);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.map-add-icon {
+	width: 44rpx;
+	height: 44rpx;
 }
 
 /* 底部信息卡片 —— cover-view */

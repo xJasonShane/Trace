@@ -46,15 +46,15 @@
             "sdkConfigs" : {
                 "maps" : {
                     "amap" : {
-                        "appkey_ios" : "",
-                        "appkey_android" : ""
+                        "appkey_ios" : "e0c3cfd6b38dd759e2769464482766a9",
+                        "appkey_android" : "e0c3cfd6b38dd759e2769464482766a9"
                     }
                 },
                 "geolocation" : {
                     "amap" : {
                         "__platform__" : ["ios", "android"],
-                        "appkey_ios" : "",
-                        "appkey_android" : ""
+                        "appkey_ios" : "e0c3cfd6b38dd759e2769464482766a9",
+                        "appkey_android" : "e0c3cfd6b38dd759e2769464482766a9"
                     }
                 }
             }

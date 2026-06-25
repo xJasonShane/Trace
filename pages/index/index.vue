@@ -12,8 +12,8 @@
 				:markers="markers"
 				:scale="13"
 				@markertap="onMarkerTap"
+				@callouttap="onMarkerTap"
 				@tap="onMapTap"
-				@click="onMapTap"
 				show-location
 			></map>
 
@@ -28,20 +28,63 @@
 				<cover-image class="map-locate-icon" :src="iconSrc('locate', locateIconColor, 2)" />
 			</cover-view>
 
-			<!-- 底部信息卡片 —— 有手账记录时显示精简预览 -->
-			<cover-view v-if="selectedLocation" class="map-card" :style="coverBoxStyle" @tap="goLocationDetail">
-				<cover-view class="mc-row">
-					<cover-view class="mc-thumb" :class="'ph-' + (selectedLocation.coverColor || 'warm')">
-						<cover-image v-if="recentJournalPhoto" class="mc-thumb-img" :src="recentJournalPhoto" />
-						<cover-image v-else class="mc-thumb-icon" :src="iconSrc('mountain', '#FFFFFF', 1.4)" />
+			<!-- 遮罩层：卡片展开时显示，点击可关闭 -->
+			<cover-view
+				v-if="cardVisible"
+				class="map-overlay"
+				:style="overlayStyle"
+				:animation="overlayAnimationData"
+				@tap="dismissCard"
+			/>
+
+			<!-- 底部信息卡片 —— 缩略二级页面 -->
+			<cover-view
+				v-if="cardVisible"
+				class="map-card"
+				:style="coverBoxStyle"
+				:animation="cardAnimationData"
+			>
+				<!-- 拖拽手柄 -->
+				<cover-view class="mc-handle">
+					<cover-view class="mc-handle-bar" />
+				</cover-view>
+
+				<!-- 手账封面图 -->
+				<cover-view class="mc-cover">
+					<cover-image
+						v-if="recentJournalPhoto"
+						class="mc-cover-img"
+						:src="recentJournalPhoto"
+					/>
+					<cover-view v-else class="mc-cover-placeholder" :class="'ph-' + (selectedLocation.coverColor || 'warm')">
+						<cover-image class="mc-cover-icon" :src="iconSrc('mountain', '#FFFFFF', 1.4)" />
 					</cover-view>
-					<cover-view class="mc-info">
-						<cover-view class="mc-name" :style="coverNameStyle">{{ selectedLocation.name }}</cover-view>
-						<cover-view class="mc-sub" :style="coverSubStyle">{{ locationJournalCount }} 篇手账 · 最近 {{ recentJournalTimeText }}</cover-view>
-						<cover-view class="mc-rating">
-							<cover-view class="mc-score">{{ ratingText }}</cover-view>
-							<cover-view class="mc-stars">{{ starsText }}</cover-view>
-						</cover-view>
+				</cover-view>
+
+				<!-- 手账标题 -->
+				<cover-view class="mc-title" :style="coverNameStyle">{{ recentJournalTitle }}</cover-view>
+
+				<!-- 地点名称 & 日期 -->
+				<cover-view class="mc-meta" :style="coverSubStyle">
+					{{ selectedLocation.name }} · {{ recentJournalTimeText }}
+				</cover-view>
+
+				<!-- 评分区域 -->
+				<cover-view class="mc-rating">
+					<cover-view class="mc-score">{{ ratingText }}</cover-view>
+					<cover-view class="mc-stars">{{ starsText }}</cover-view>
+				</cover-view>
+
+				<!-- 内容摘要 -->
+				<cover-view class="mc-excerpt" :style="coverSubStyle">{{ recentJournalExcerpt }}</cover-view>
+
+				<!-- 操作按钮 -->
+				<cover-view class="mc-actions">
+					<cover-view class="mc-btn mc-btn-primary" @tap="goLocationDetail">
+						<cover-view class="mc-btn-text">查看全部手账</cover-view>
+					</cover-view>
+					<cover-view class="mc-btn mc-btn-outline" @tap="goNewJournal">
+						<cover-view class="mc-btn-text-outline">写新手账</cover-view>
 					</cover-view>
 				</cover-view>
 			</cover-view>
@@ -83,7 +126,10 @@ export default {
 			statusBarHeight: 0,
 			center: { latitude: 30.27, longitude: 120.15 },
 			selectedLocation: null,
-			markerTapPending: false
+			markerTapPending: false,
+			cardVisible: false,
+			cardAnimationData: null,
+			overlayAnimationData: null
 		}
 	},
 	computed: {
@@ -169,6 +215,22 @@ export default {
 			if (this.currentRating === 0) return ''
 			const full = Math.round(this.currentRating)
 			return '★★★★★'.slice(0, Math.max(1, Math.min(5, full)))
+		},
+		// 最近一篇手账的标题
+		recentJournalTitle() {
+			const journals = this.selectedLocationJournals
+			return journals.length > 0 ? journals[0].title : ''
+		},
+		// 最近一篇手账的内容摘要（截取前80字）
+		recentJournalExcerpt() {
+			const journals = this.selectedLocationJournals
+			if (journals.length === 0) return ''
+			const content = journals[0].content || ''
+			return content.length > 80 ? content.slice(0, 80) + '…' : content
+		},
+		// 遮罩层样式
+		overlayStyle() {
+			return 'background: rgba(0, 0, 0, 0.4);'
 		}
 	},
 	onLoad() {
@@ -181,11 +243,13 @@ export default {
 			const loc = this.locationStore.getLocation(this.selectedLocation.id)
 			if (!loc) {
 				// 地点已被删除
+				this.cardVisible = false
 				this.selectedLocation = null
 			} else {
 				const journals = this.journalStore.getJournalsByLocation(loc.id)
 				if (journals.length === 0) {
 					// 地点已无手账，清除选中状态
+					this.cardVisible = false
 					this.selectedLocation = null
 				} else {
 					// 更新为最新的地点对象引用
@@ -194,6 +258,10 @@ export default {
 			}
 		}
 	},
+	onUnload() {
+		// 清理 marker 点击防抖定时器，避免页面销毁后回调残留
+		clearTimeout(this._markerTapTimer)
+	},
 	methods: {
 		// 生成 SVG data URI，供 cover-image 使用
 		iconSrc(name, color, strokeWidth) {
@@ -201,15 +269,22 @@ export default {
 			const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${color}' stroke-width='${strokeWidth}' stroke-linecap='round' stroke-linejoin='round'>${paths}</svg>`
 			return 'data:image/svg+xml,' + encodeURIComponent(svg)
 		},
+		// marker 图标点击与 callout 气泡点击共用同一处理逻辑
+		// callout 设置为 display:'ALWAYS' 常驻显示，会覆盖 marker 图标的点击区域，
+		// 因此必须同时监听 @markertap 与 @callouttap，否则点击气泡将无响应
 		onMarkerTap(e) {
 			// 标记为 marker 点击，防止 onMapTap 误触发
+			// 由于部分平台事件顺序为 tap -> markertap/callouttap，
+			// 此标志位需在事件最早阶段设置，配合 onMapTap 内的延迟校验
 			this.markerTapPending = true
-			setTimeout(() => { this.markerTapPending = false }, 300)
+			clearTimeout(this._markerTapTimer)
+			this._markerTapTimer = setTimeout(() => { this.markerTapPending = false }, 400)
 
-			// 确保 markerId 为数字类型（不同平台可能返回字符串）
-			const detail = e.detail || e.mp && e.mp.detail || {}
+			// 兼容 markertap / callouttap 两种事件及多平台数据格式
+			const detail = (e && (e.detail || (e.mp && e.mp.detail))) || {}
 			const markerId = Number(detail.markerId)
-			if (isNaN(markerId)) {
+			// marker id 从 1 开始，0 或 NaN 均视为无效
+			if (!markerId || isNaN(markerId)) {
 				console.warn('[onMarkerTap] 无效的 markerId:', detail.markerId)
 				return
 			}
@@ -221,14 +296,17 @@ export default {
 				// 根据是否有手账记录区分交互
 				const journals = this.journalStore.getJournalsByLocation(loc.id)
 				if (journals.length === 0) {
-					// 无手账记录：隐藏预览卡片，跳转到添加手账界面
-					this.selectedLocation = null
+					// 无手账记录：直接跳转新建手账页（与空白区域点击创建手账流程一致）
 					uni.navigateTo({
 						url: '/pages/journal-edit/index?locationId=' + loc.id
 					})
 				} else {
-					// 有手账记录：显示精简预览卡片
+					// 有手账记录：展开缩略二级页面，卡片内提供「写新手账」入口
 					this.selectedLocation = loc
+					this.cardVisible = true
+					this.$nextTick(() => {
+						this.runCardEnterAnimation()
+					})
 				}
 			} else {
 				console.warn('[onMarkerTap] marker索引越界: idx=' + idx + ', locations.length=' + this.displayLocations.length)
@@ -236,12 +314,15 @@ export default {
 		},
 		// 点击地图空白区域 — 添加新地点
 		onMapTap(e) {
+			// marker/callout 点击后短时屏蔽 map 空白点击，避免事件冒泡误触发新建流程
 			if (this.markerTapPending) return
 			// 兼容不同平台的事件数据格式：uni-app 下为 e.detail，微信小程序下可能为 e.mp.detail
-			const detail = e.detail || (e.mp && e.mp.detail) || {}
-			const lat = Number(detail.latitude)
-			const lng = Number(detail.longitude)
-			if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+			const detail = (e && (e.detail || (e.mp && e.mp.detail))) || {}
+			// 仅当 detail 明确携带坐标时才转换；缺失字段直接判为无效，避免 Number(undefined)=NaN
+			const lat = detail.latitude != null ? Number(detail.latitude) : NaN
+			const lng = detail.longitude != null ? Number(detail.longitude) : NaN
+			// 用 isNaN 判定，避免原代码 !lat 在赤道/本初子午线（lat=0 或 lng=0）处的误判
+			if (isNaN(lat) || isNaN(lng)) {
 				console.warn('[onMapTap] 未获取到有效坐标:', detail)
 				return
 			}
@@ -267,6 +348,54 @@ export default {
 		},
 		goSearch() {
 			uni.navigateTo({ url: '/pages/search/index' })
+		},
+		// 卡片进入动画：从底部滑入 + 遮罩淡入
+		runCardEnterAnimation() {
+			const animation = uni.createAnimation({
+				duration: 350,
+				timingFunction: 'cubic-bezier(0.32, 0.72, 0, 1)'
+			})
+			// 遮罩淡入
+			const overlayAnim = uni.createAnimation({ duration: 300 })
+			overlayAnim.opacity(1).step()
+			this.overlayAnimationData = overlayAnim.export()
+
+			// 卡片从底部滑入
+			animation.translateY(0).opacity(1).step()
+			this.cardAnimationData = animation.export()
+		},
+		// 卡片退出动画：滑回底部 + 遮罩淡出
+		runCardExitAnimation(callback) {
+			const animation = uni.createAnimation({
+				duration: 300,
+				timingFunction: 'cubic-bezier(0.32, 0.72, 0, 1)'
+			})
+			const overlayAnim = uni.createAnimation({ duration: 250 })
+			overlayAnim.opacity(0).step()
+			this.overlayAnimationData = overlayAnim.export()
+
+			const cardHeight = uni.getSystemInfoSync().windowHeight * 0.45
+			animation.translateY(cardHeight).opacity(0).step()
+			this.cardAnimationData = animation.export()
+
+			setTimeout(() => {
+				this.cardVisible = false
+				this.selectedLocation = null
+				if (callback) callback()
+			}, 300)
+		},
+		// 关闭卡片（点击遮罩层）
+		dismissCard() {
+			this.runCardExitAnimation()
+		},
+		// 从卡片内跳转新建手账（先收起卡片再跳转）
+		goNewJournal() {
+			const locId = this.selectedLocation ? this.selectedLocation.id : ''
+			this.runCardExitAnimation(() => {
+				uni.navigateTo({
+					url: '/pages/journal-edit/index?locationId=' + locId
+				})
+			})
 		},
 		goLocationDetail() {
 			if (this.selectedLocation) {
@@ -354,90 +483,159 @@ export default {
 	height: 36rpx;
 }
 
-/* 底部信息卡片 —— cover-view */
+/* 遮罩层 */
+.map-overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 4;
+	opacity: 0;
+}
+
+/* 底部信息卡片 —— 缩略二级页面 */
 .map-card {
 	position: absolute;
-	bottom: 32rpx;
-	left: 32rpx;
-	right: 32rpx;
-	z-index: 3;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	z-index: 5;
 	background: #FFFFFF;
-	border: 1rpx solid #EDEAE5;
-	border-radius: 36rpx;
-	padding: 24rpx;
+	border-radius: 36rpx 36rpx 0 0;
+	padding: 16rpx 32rpx 48rpx;
+	transform: translateY(100%);
+	opacity: 0;
 }
 
-.mc-row {
+/* 拖拽手柄 */
+.mc-handle {
 	display: flex;
-	flex-direction: row;
-	align-items: center;
+	justify-content: center;
+	padding: 12rpx 0 20rpx;
 }
 
-.mc-thumb {
-	width: 104rpx;
-	height: 104rpx;
-	border-radius: 20rpx;
+.mc-handle-bar {
+	width: 64rpx;
+	height: 8rpx;
+	background: #E0DCD7;
+	border-radius: 4rpx;
+}
+
+/* 封面图 */
+.mc-cover {
+	width: 100%;
+	height: 320rpx;
+	border-radius: 24rpx;
+	overflow: hidden;
+	margin-bottom: 24rpx;
+}
+
+.mc-cover-img {
+	width: 100%;
+	height: 100%;
+}
+
+.mc-cover-placeholder {
+	width: 100%;
+	height: 100%;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	margin-right: 20rpx;
 }
 
-/* cover-view 在部分小程序平台不支持 linear-gradient，使用纯色保证兼容 */
-.mc-thumb.ph-warm { background: #E3BFB4; }
-.mc-thumb.ph-blue { background: #ADC8E0; }
-.mc-thumb.ph-lavender { background: #C4B6D8; }
-.mc-thumb.ph-green { background: #AFCFA6; }
-.mc-thumb.ph-gold { background: #D8C5A8; }
+.mc-cover-placeholder.ph-warm { background: #E3BFB4; }
+.mc-cover-placeholder.ph-blue { background: #ADC8E0; }
+.mc-cover-placeholder.ph-lavender { background: #C4B6D8; }
+.mc-cover-placeholder.ph-green { background: #AFCFA6; }
+.mc-cover-placeholder.ph-gold { background: #D8C5A8; }
 
-.mc-thumb-icon {
-	width: 32rpx;
-	height: 32rpx;
+.mc-cover-icon {
+	width: 64rpx;
+	height: 64rpx;
 }
 
-.mc-thumb-img {
-	width: 100%;
-	height: 100%;
-	border-radius: 20rpx;
+/* 标题 */
+.mc-title {
+	font-size: 34rpx;
+	font-weight: 700;
+	line-height: 44rpx;
+	margin-bottom: 8rpx;
 }
 
-.mc-info {
-	flex: 1;
-	display: flex;
-	flex-direction: column;
-}
-
-.mc-name {
-	font-size: 30rpx;
-	font-weight: 600;
-	color: #2D2A26;
-	line-height: 1.5;
-}
-
-.mc-sub {
+/* 元信息 */
+.mc-meta {
 	font-size: 24rpx;
-	color: #7A756F;
-	line-height: 1.5;
-	margin-top: 4rpx;
+	line-height: 32rpx;
+	margin-bottom: 16rpx;
 }
 
+/* 评分 */
 .mc-rating {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	margin-top: 4rpx;
+	margin-bottom: 16rpx;
 }
 
 .mc-score {
-	font-size: 30rpx;
+	font-size: 36rpx;
 	font-weight: 700;
 	color: #D9A54A;
 	margin-right: 16rpx;
 }
 
 .mc-stars {
-	font-size: 22rpx;
+	font-size: 28rpx;
 	color: #D9A54A;
-	letter-spacing: 2rpx;
+	letter-spacing: 4rpx;
+}
+
+/* 摘要 */
+.mc-excerpt {
+	font-size: 26rpx;
+	line-height: 38rpx;
+	margin-bottom: 24rpx;
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 3;
+	overflow: hidden;
+}
+
+/* 操作按钮 */
+.mc-actions {
+	display: flex;
+	flex-direction: row;
+	gap: 20rpx;
+}
+
+.mc-btn {
+	flex: 1;
+	height: 80rpx;
+	border-radius: 20rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.mc-btn-primary {
+	background: #E09080;
+}
+
+.mc-btn-text {
+	font-size: 28rpx;
+	font-weight: 600;
+	color: #FFFFFF;
+}
+
+.mc-btn-outline {
+	background: transparent;
+	border: 2rpx solid #E09080;
+}
+
+.mc-btn-text-outline {
+	font-size: 28rpx;
+	font-weight: 600;
+	color: #E09080;
 }
 </style>

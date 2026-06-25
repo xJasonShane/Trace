@@ -42,19 +42,19 @@ export const useProfileStore = defineStore('profile', {
 		// 保存资料
 		saveProfile(data) {
 			this.profile = { ...this.profile, ...data }
-			storage.set(storage.KEYS.PROFILE, this.profile)
+			return storage.set(storage.KEYS.PROFILE, this.profile)
 		},
 
 		// 更新设置
 		saveSettings(data) {
 			this.settings = { ...this.settings, ...data }
-			storage.set(storage.KEYS.SETTINGS, this.settings)
+			return storage.set(storage.KEYS.SETTINGS, this.settings)
 		},
 
 		// 更新头像
 		updateAvatar(path) {
 			this.profile.avatar = path
-			storage.set(storage.KEYS.PROFILE, this.profile)
+			return storage.set(storage.KEYS.PROFILE, this.profile)
 		}
 	}
 })

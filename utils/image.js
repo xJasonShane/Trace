@@ -5,22 +5,33 @@
 
 /**
  * 选择图片
+ * 优先使用 chooseMedia（微信小程序新 API），降级到 chooseImage
  * @param {number} count 选择数量
  * @returns {Promise<string[]>} 临时文件路径数组
  */
 function chooseImage(count = 9) {
 	return new Promise((resolve, reject) => {
-		uni.chooseImage({
-			count,
-			sizeType: ['compressed'],
-			sourceType: ['album', 'camera'],
-			success: (res) => {
-				resolve(res.tempFilePaths)
-			},
-			fail: (err) => {
-				reject(err)
-			}
-		})
+		if (uni.chooseMedia) {
+			uni.chooseMedia({
+				count,
+				mediaType: ['image'],
+				sourceType: ['album', 'camera'],
+				sizeType: ['compressed'],
+				success: (res) => {
+					const paths = (res.tempFiles || []).map(f => f.tempFilePath)
+					resolve(paths)
+				},
+				fail: (err) => reject(err)
+			})
+		} else {
+			uni.chooseImage({
+				count,
+				sizeType: ['compressed'],
+				sourceType: ['album', 'camera'],
+				success: (res) => resolve(res.tempFilePaths),
+				fail: (err) => reject(err)
+			})
+		}
 	})
 }
 
@@ -48,11 +59,17 @@ function compressImage(src, quality = 60) {
 
 /**
  * 保存图片到永久存储
+ * H5 平台不支持 saveFile，直接使用临时路径（blob URL）
  * @param {string} tempFilePath 临时文件路径
  * @returns {Promise<string>} 永久文件路径
  */
 function saveFile(tempFilePath) {
 	return new Promise((resolve, reject) => {
+		// #ifdef H5
+		resolve(tempFilePath)
+		return
+		// #endif
+		// #ifndef H5
 		uni.saveFile({
 			tempFilePath,
 			success: (res) => {
@@ -62,6 +79,7 @@ function saveFile(tempFilePath) {
 				reject(err)
 			}
 		})
+		// #endif
 	})
 }
 

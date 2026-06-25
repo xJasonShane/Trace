@@ -198,18 +198,23 @@ export default {
 			}
 			this.saving = true
 			const profileStore = useProfileStore()
-			profileStore.saveProfile({
+			const ok = profileStore.saveProfile({
 				nickname: this.form.nickname.trim(),
 				bio: this.form.bio.trim(),
 				city: this.form.city.trim(),
 				birthday: this.form.birthday,
 				avatar: this.form.avatar
 			})
-			uni.showToast({ title: '保存成功', icon: 'success' })
-			setTimeout(() => {
+			if (ok) {
+				uni.showToast({ title: '保存成功', icon: 'success' })
+				setTimeout(() => {
+					this.saving = false
+					uni.navigateBack()
+				}, 800)
+			} else {
 				this.saving = false
-				uni.navigateBack()
-			}, 800)
+				uni.showToast({ title: '保存失败，请重试', icon: 'none' })
+			}
 		}
 	}
 }

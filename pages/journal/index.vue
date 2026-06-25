@@ -49,7 +49,7 @@
 					>
 						<view class="lc-thumb" :class="'ph-' + getColorClass(j)">
 							<image
-								v-if="j.photos && j.photos.length > 0"
+								v-if="j.photos && j.photos.length > 0 && !thumbFailed[j.id]"
 								class="lc-thumb-img"
 								:src="j.photos[0]"
 								mode="aspectFill"
@@ -122,7 +122,9 @@ export default {
 			],
 			deleteVisible: false,
 			deleteTargetId: '',
-			deleteTargetTitle: ''
+			deleteTargetTitle: '',
+			// 记录首图加载失败的手账 id，避免直接修改 store 数据
+			thumbFailed: {}
 		}
 	},
 	computed: {
@@ -216,10 +218,8 @@ export default {
 			}
 		},
 		onThumbError(journal) {
-			// 图片加载失败时清空该手账的首图引用，回退到默认图标
-			if (journal.photos && journal.photos.length > 0) {
-				journal.photos.splice(0, 1)
-			}
+			// 图片加载失败时仅记录到本地状态，不修改 store 中的持久化数据
+			this.thumbFailed[journal.id] = true
 		}
 	}
 }

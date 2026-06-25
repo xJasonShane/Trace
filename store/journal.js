@@ -119,7 +119,7 @@ export const useJournalStore = defineStore('journal', {
 	actions: {
 		// 保存到本地存储
 		persist() {
-			storage.set(storage.KEYS.JOURNALS, this.journals)
+			return storage.set(storage.KEYS.JOURNALS, this.journals)
 		},
 
 		// 新增手账
@@ -145,7 +145,12 @@ export const useJournalStore = defineStore('journal', {
 				updatedAt: now
 			}
 			this.journals.unshift(journal)
-			this.persist()
+			if (!this.persist()) {
+				// 持久化失败，回滚内存状态，避免内存与存储不一致
+				const idx = this.journals.findIndex(j => j.id === journal.id)
+				if (idx !== -1) this.journals.splice(idx, 1)
+				return null
+			}
 			return journal
 		},
 
@@ -153,6 +158,7 @@ export const useJournalStore = defineStore('journal', {
 		updateJournal(id, data) {
 			const idx = this.journals.findIndex(j => j.id === id)
 			if (idx === -1) return null
+			const oldJournal = { ...this.journals[idx] }
 			const updated = {
 				...this.journals[idx],
 				...data,
@@ -162,7 +168,11 @@ export const useJournalStore = defineStore('journal', {
 				updated.overallRating = calcOverall(data.ratings)
 			}
 			this.journals[idx] = updated
-			this.persist()
+			if (!this.persist()) {
+				// 持久化失败，回滚到旧数据
+				this.journals[idx] = oldJournal
+				return null
+			}
 			return updated
 		},
 
@@ -170,8 +180,13 @@ export const useJournalStore = defineStore('journal', {
 		deleteJournal(id) {
 			const idx = this.journals.findIndex(j => j.id === id)
 			if (idx === -1) return false
+			const removed = this.journals[idx]
 			this.journals.splice(idx, 1)
-			this.persist()
+			if (!this.persist()) {
+				// 持久化失败，恢复被删除的手账
+				this.journals.splice(idx, 0, removed)
+				return false
+			}
 			return true
 		},
 

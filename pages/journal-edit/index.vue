@@ -68,7 +68,7 @@
 					<text>{{ locationWarning }}</text>
 				</view>
 				<!-- 位置信息标签 -->
-				<view v-if="form.locationLat && form.locationLng" class="loc-info-tag">
+				<view v-if="form.locationLat != null && form.locationLng != null && !(form.locationLat === 0 && form.locationLng === 0)" class="loc-info-tag">
 					<Icon name="locate" :size="26" color="#7FA3C8" :strokeWidth="1.8" />
 					<text>{{ form.locationLat.toFixed(6) }}, {{ form.locationLng.toFixed(6) }}</text>
 				</view>
@@ -216,13 +216,20 @@ export default {
 		this.form.date = dateUtil.formatDate(new Date())
 
 		// 从地图点选/长按跳转来，携带坐标
-		if (options && options.lat && options.lng) {
-			this.form.locationLat = parseFloat(options.lat)
-			this.form.locationLng = parseFloat(options.lng)
-			this.form.locationName = options.name || ''
-			this.form.locationAddress = options.address || ''
-			if (options.name) {
-				this.validatedLocationId = options.locationId || ''
+		// 注意：不能用 truthy 判断坐标，lat=0（赤道）/lng=0（本初子午线）是合法值
+		let hasCoords = false
+		if (options && options.lat != null && options.lng != null) {
+			const lat = parseFloat(options.lat)
+			const lng = parseFloat(options.lng)
+			if (!isNaN(lat) && !isNaN(lng)) {
+				this.form.locationLat = lat
+				this.form.locationLng = lng
+				this.form.locationName = options.name || ''
+				this.form.locationAddress = options.address || ''
+				if (options.name) {
+					this.validatedLocationId = options.locationId || ''
+				}
+				hasCoords = true
 			}
 		}
 
@@ -231,7 +238,7 @@ export default {
 			this.isEdit = true
 			this.journalId = options.id
 			this.loadJournal()
-		} else if (options && options.locationId && !options.lat) {
+		} else if (options && options.locationId && !hasCoords) {
 			// 从地点详情跳转来，预填地点（排除带坐标的情况）
 			this.locationId = options.locationId
 			this.validatedLocationId = options.locationId
@@ -469,6 +476,10 @@ export default {
 					latitude: this.form.locationLat || 0,
 					longitude: this.form.locationLng || 0
 				})
+				if (!loc) {
+					uni.showToast({ title: '保存失败：无法创建地点', icon: 'none' })
+					return
+				}
 				locationId = loc.id
 			} else if (locName && locationId) {
 				// 已有地点 — 如果坐标有变化，更新坐标

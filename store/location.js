@@ -32,7 +32,7 @@ export const useLocationStore = defineStore('location', {
 	actions: {
 		// 保存到本地存储
 		persist() {
-			storage.set(storage.KEYS.LOCATIONS, this.locations)
+			return storage.set(storage.KEYS.LOCATIONS, this.locations)
 		},
 
 		// 新增地点
@@ -51,7 +51,12 @@ export const useLocationStore = defineStore('location', {
 				createdAt: data.createdAt || dateUtil.formatDateTime(new Date())
 			}
 			this.locations.push(location)
-			this.persist()
+			if (!this.persist()) {
+				// 持久化失败，回滚内存状态
+				const idx = this.locations.findIndex(l => l.id === location.id)
+				if (idx !== -1) this.locations.splice(idx, 1)
+				return null
+			}
 			return location
 		},
 
@@ -59,8 +64,13 @@ export const useLocationStore = defineStore('location', {
 		updateLocation(id, data) {
 			const idx = this.locations.findIndex(l => l.id === id)
 			if (idx === -1) return null
+			const oldLocation = { ...this.locations[idx] }
 			this.locations[idx] = { ...this.locations[idx], ...data }
-			this.persist()
+			if (!this.persist()) {
+				// 持久化失败，回滚到旧数据
+				this.locations[idx] = oldLocation
+				return null
+			}
 			return this.locations[idx]
 		},
 
@@ -68,8 +78,13 @@ export const useLocationStore = defineStore('location', {
 		deleteLocation(id) {
 			const idx = this.locations.findIndex(l => l.id === id)
 			if (idx === -1) return false
+			const removed = this.locations[idx]
 			this.locations.splice(idx, 1)
-			this.persist()
+			if (!this.persist()) {
+				// 持久化失败，恢复被删除的地点
+				this.locations.splice(idx, 0, removed)
+				return false
+			}
 			return true
 		},
 
@@ -111,11 +126,22 @@ export const useLocationStore = defineStore('location', {
 		updateStats(locationId, journalCount, photoCount) {
 			const loc = this.getLocation(locationId)
 			if (loc) {
+				const oldJournalCount = loc.journalCount
+				const oldPhotoCount = loc.photoCount
+				const oldLastVisitDate = loc.lastVisitDate
 				loc.journalCount = journalCount
 				loc.photoCount = photoCount
 				loc.lastVisitDate = dateUtil.formatDate(new Date())
-				this.persist()
+				if (!this.persist()) {
+					// 持久化失败，回滚统计字段
+					loc.journalCount = oldJournalCount
+					loc.photoCount = oldPhotoCount
+					loc.lastVisitDate = oldLastVisitDate
+					return false
+				}
+				return true
 			}
+			return false
 		},
 
 		// 设置选中地点

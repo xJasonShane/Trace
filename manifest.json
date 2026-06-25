@@ -1,9 +1,9 @@
 {
     "name" : "拾光手账",
-    "appid" : "",
+    "appid" : "__UNI__XXXXX",
     "description" : "地图生活手账 — 用脚步丈量世界，用手账记录时光",
     "versionName" : "0.0.1",
-    "versionCode" : "100",
+    "versionCode" : 100,
     "transformPx" : false,
     "app-plus" : {
         "usingComponents" : true,
@@ -42,19 +42,26 @@
                     "<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\"/>"
                 ]
             },
-            "ios" : {},
+            "ios" : {
+                "privacyDescription" : {
+                    "NSCameraUsageDescription" : "用于拍摄手账照片和头像",
+                    "NSPhotoLibraryUsageDescription" : "用于选择手账照片和头像",
+                    "NSPhotoLibraryAddUsageDescription" : "用于保存手账照片到相册",
+                    "NSLocationWhenInUseUsageDescription" : "你的位置信息将用于地图显示和地点记录"
+                }
+            },
             "sdkConfigs" : {
                 "maps" : {
                     "amap" : {
-                        "appkey_ios" : "e0c3cfd6b38dd759e2769464482766a9",
-                        "appkey_android" : "e0c3cfd6b38dd759e2769464482766a9"
+                        "appkey_ios" : "your-ios-amap-key",
+                        "appkey_android" : "your-android-amap-key"
                     }
                 },
                 "geolocation" : {
                     "amap" : {
                         "__platform__" : ["ios", "android"],
-                        "appkey_ios" : "e0c3cfd6b38dd759e2769464482766a9",
-                        "appkey_android" : "e0c3cfd6b38dd759e2769464482766a9"
+                        "appkey_ios" : "your-ios-amap-key",
+                        "appkey_android" : "your-android-amap-key"
                     }
                 }
             }
@@ -62,7 +69,7 @@
     },
     "quickapp" : {},
     "mp-weixin" : {
-        "appid" : "",
+        "appid" : "your-mp-weixin-appid",
         "setting" : {
             "urlCheck" : false
         },

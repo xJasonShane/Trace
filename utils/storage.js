@@ -31,12 +31,15 @@ function get(key, defaultValue = null) {
  * 写入存储数据
  * @param {string} key 存储键名
  * @param {*} value 存储的值
+ * @returns {boolean} 是否写入成功
  */
 function set(key, value) {
 	try {
 		uni.setStorageSync(key, value)
+		return true
 	} catch (e) {
 		console.error('写入存储失败:', key, e)
+		return false
 	}
 }
 
@@ -58,7 +61,7 @@ function remove(key) {
  * @returns {string} 唯一ID
  */
 function generateId(prefix = 'id') {
-	return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+	return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`
 }
 
 /**
@@ -78,7 +81,10 @@ function createBackup() {
 				settings: get(KEYS.SETTINGS, {})
 			}
 		}
-		set(KEYS.BACKUP, backup)
+		const ok = set(KEYS.BACKUP, backup)
+		if (!ok) {
+			return { success: false, message: '备份失败：写入存储失败' }
+		}
 		return {
 			success: true,
 			message: '备份成功',
@@ -124,10 +130,13 @@ function restoreBackup() {
 		if (!backup || !backup.data) {
 			return { success: false, message: '未找到备份数据' }
 		}
-		set(KEYS.JOURNALS, backup.data.journals || [])
-		set(KEYS.LOCATIONS, backup.data.locations || [])
-		set(KEYS.PROFILE, backup.data.profile || {})
-		set(KEYS.SETTINGS, backup.data.settings || {})
+		const okJ = set(KEYS.JOURNALS, backup.data.journals || [])
+		const okL = set(KEYS.LOCATIONS, backup.data.locations || [])
+		const okP = set(KEYS.PROFILE, backup.data.profile || {})
+		const okS = set(KEYS.SETTINGS, backup.data.settings || {})
+		if (!(okJ && okL && okP && okS)) {
+			return { success: false, message: '恢复失败：部分数据写入失败' }
+		}
 		return { success: true, message: '恢复成功' }
 	} catch (e) {
 		console.error('恢复备份失败:', e)

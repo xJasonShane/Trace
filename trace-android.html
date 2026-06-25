@@ -256,8 +256,6 @@ body{
    ═══════════════════════════════════════════════════════════════ */
 .subpage{position:absolute; inset:0; z-index:80; background:var(--bg); display:none; flex-direction:column; transform:translateX(100%); transition:transform .3s cubic-bezier(.32,.72,0,1);}
 .subpage.show{display:flex; transform:translateX(0);}
-.subpage.enter{animation:slideIn .3s cubic-bezier(.32,.72,0,1);}
-@keyframes slideIn{from{transform:translateX(100%);} to{transform:translateX(0);}}
 
 .nav-bar{display:flex; align-items:center; padding:8px 12px 8px; gap:8px; flex-shrink:0; border-bottom:1px solid var(--border);}
 .nav-back{width:36px; height:36px; border-radius:10px; background:var(--input-bg); display:flex; align-items:center; justify-content:center; cursor:pointer; border:none;}
@@ -968,8 +966,17 @@ function switchTab(i){
 /* ═══════════════════════════════════════════════════════════════
    二级页面导航
    ═══════════════════════════════════════════════════════════════ */
-function openSub(id){ const s=$(id); s.style.display='flex'; s.classList.add('enter'); setTimeout(()=>s.classList.remove('enter'),320); }
-function closeSub(id){ const s=$(id); s.classList.remove('show'); s.style.transform='translateX(100%)'; setTimeout(()=>{ s.style.display='none'; s.style.transform=''; },300); }
+function openSub(id){
+  const s=$(id);
+  s.style.display='flex';          // 先显示（处于 translateX(100%) 屏幕右侧外）
+  void s.offsetWidth;              // 强制重排，确保起始 transform 生效
+  s.classList.add('show');         // 切到 translateX(0)，触发滑入过渡
+}
+function closeSub(id){
+  const s=$(id);
+  s.classList.remove('show');      // 回到 translateX(100%)，触发滑出过渡
+  setTimeout(()=>{ if(!s.classList.contains('show')) s.style.display=''; },320); // 过渡结束后恢复 display:none
+}
 function navigate(name, params={}){
   if(name==='search'){
     openSub('sub-search');

@@ -41,18 +41,6 @@ function set(key, value) {
 }
 
 /**
- * 删除存储数据
- * @param {string} key 存储键名
- */
-function remove(key) {
-	try {
-		uni.removeStorageSync(key)
-	} catch (e) {
-		console.error('删除存储失败:', key, e)
-	}
-}
-
-/**
  * 生成唯一ID
  * @param {string} prefix 前缀
  * @returns {string} 唯一ID
@@ -139,7 +127,6 @@ export default {
 	KEYS,
 	get,
 	set,
-	remove,
 	generateId,
 	createBackup,
 	getBackupInfo,

@@ -83,20 +83,10 @@ function getDateGroup(date) {
 	return '更早'
 }
 
-/**
- * 获取月份名称
- * @param {number} month 0-11
- * @returns {string}
- */
-function getMonthName(month) {
-	return `${month + 1}月`
-}
-
 export default {
 	formatDate,
 	formatDateDot,
 	formatDateTime,
 	formatRelative,
-	getDateGroup,
-	getMonthName
+	getDateGroup
 }

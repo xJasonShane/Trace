@@ -7,7 +7,7 @@
 			<!-- 顶部头像区 -->
 			<view class="profile-top">
 				<view class="profile-avatar">
-					<image v-if="profile.avatar" :src="profile.avatar" class="avatar-img" mode="aspectFill" />
+					<image v-if="profile.avatar" :src="profile.avatar" class="avatar-img" mode="aspectFill" lazy-load />
 					<Icon v-else name="profile" :size="56" color="#C09080" :strokeWidth="1.6" />
 				</view>
 				<text class="profile-name">{{ profile.nickname || '小鹿同学' }}</text>
@@ -43,15 +43,16 @@
 						<Icon name="arrowRight" :size="28" :color="themeTertiaryColor" :strokeWidth="2" />
 					</view>
 				</view>
-				<view class="settings-row" @tap="goTheme">
+				<view class="settings-row">
 					<view class="settings-icon icon-theme">
 						<Icon name="sun" :size="34" color="#FFFFFF" :strokeWidth="1.8" />
 					</view>
 					<text class="settings-label">主题外观</text>
-					<text class="settings-meta">{{ settings.theme === 'dark' ? '黑夜模式' : '白天模式' }}</text>
-					<view class="settings-arrow">
-						<Icon name="arrowRight" :size="28" :color="themeTertiaryColor" :strokeWidth="2" />
-					</view>
+					<view
+						class="toggle"
+						:class="{ off: settings.theme !== 'dark' }"
+						@tap="toggleTheme"
+					></view>
 				</view>
 				<view class="settings-row">
 					<view class="settings-icon icon-notify">
@@ -125,6 +126,16 @@ export default {
 			backupTick: 0
 		}
 	},
+	created() {
+		// 非响应式定时器引用集合，页面销毁时统一清理
+		this._timers = []
+	},
+	onUnload() {
+		if (this._timers) {
+			this._timers.forEach(id => clearTimeout(id))
+			this._timers = []
+		}
+	},
 	computed: {
 		profile() {
 			return this.profileStore.profile
@@ -172,18 +183,9 @@ export default {
 		goEdit() {
 			uni.navigateTo({ url: '/pages/profile-edit/index' })
 		},
-		goTheme() {
-			uni.showActionSheet({
-				itemList: ['白天模式', '黑夜模式'],
-				success: (res) => {
-					const theme = res.tapIndex === 1 ? 'dark' : 'light'
-					this.profileStore.saveSettings({ theme })
-					uni.showToast({
-						title: theme === 'dark' ? '已切换至黑夜模式' : '已切换至白天模式',
-						icon: 'none'
-					})
-				}
-			})
+		toggleTheme() {
+			const next = this.settings.theme === 'dark' ? 'light' : 'dark'
+			this.profileStore.saveSettings({ theme: next })
 		},
 		goBackup() {
 			if (this.backing) return
@@ -206,7 +208,7 @@ export default {
 		doBackup() {
 			this.backing = true
 			uni.showLoading({ title: '备份中…' })
-			setTimeout(() => {
+			this._timers.push(setTimeout(() => {
 				const result = storage.createBackup()
 				uni.hideLoading()
 				this.backing = false
@@ -217,7 +219,7 @@ export default {
 				} else {
 					uni.showToast({ title: result.message, icon: 'none' })
 				}
-			}, 300)
+			}, 300))
 		},
 		confirmRestore() {
 			const info = storage.getBackupInfo()
@@ -236,20 +238,20 @@ export default {
 		},
 		doRestore() {
 			uni.showLoading({ title: '恢复中…' })
-			setTimeout(() => {
+			this._timers.push(setTimeout(() => {
 				const result = storage.restoreBackup()
 				uni.hideLoading()
 				if (result.success) {
 					this.backupTick++
 					uni.showToast({ title: '恢复成功', icon: 'success' })
 					// 刷新页面数据
-					setTimeout(() => {
+					this._timers.push(setTimeout(() => {
 						uni.reLaunch({ url: '/pages/profile/index' })
-					}, 1200)
+					}, 1200))
 				} else {
 					uni.showToast({ title: result.message, icon: 'none' })
 				}
-			}, 300)
+			}, 300))
 		},
 		goAbout() {
 			uni.showModal({

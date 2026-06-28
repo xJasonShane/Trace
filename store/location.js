@@ -8,24 +8,13 @@ import dateUtil from '../utils/date.js'
 
 export const useLocationStore = defineStore('location', {
 	state: () => ({
-		locations: storage.get(storage.KEYS.LOCATIONS, []),
-		selectedLocationId: null
+		locations: storage.get(storage.KEYS.LOCATIONS, [])
 	}),
 
 	getters: {
 		// 地点总数
 		totalCount() {
 			return this.locations.length
-		},
-
-		// 当前选中的地点
-		selectedLocation() {
-			return this.locations.find(l => l.id === this.selectedLocationId)
-		},
-
-		// 按访问次数降序
-		popularLocations() {
-			return [...this.locations].sort((a, b) => (b.visitCount || 0) - (a.visitCount || 0))
 		}
 	},
 
@@ -116,11 +105,6 @@ export const useLocationStore = defineStore('location', {
 				loc.lastVisitDate = dateUtil.formatDate(new Date())
 				this.persist()
 			}
-		},
-
-		// 设置选中地点
-		setSelected(id) {
-			this.selectedLocationId = id
 		}
 	}
 })

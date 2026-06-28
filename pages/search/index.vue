@@ -48,7 +48,7 @@
 
 			<!-- 结果列表 -->
 			<view
-				v-for="item in resultList"
+				v-for="item in highlightedResults"
 				:key="item.type + '-' + item.id"
 				class="list-card"
 				hover-class="list-card-hover"
@@ -74,14 +74,14 @@
 				<view class="lc-body">
 					<view class="lc-title">
 						<text
-							v-for="(seg, i) in highlightText(item.title, keyword)"
+							v-for="(seg, i) in item.titleSegs"
 							:key="i"
 							:class="{ highlight: seg.highlight }"
 						>{{ seg.text }}</text>
 					</view>
 					<view class="lc-loc">
 						<text
-							v-for="(seg, i) in highlightText(item.subtitle, keyword)"
+							v-for="(seg, i) in item.subtitleSegs"
 							:key="i"
 							:class="{ highlight: seg.highlight }"
 						>{{ seg.text }}</text>
@@ -120,6 +120,7 @@ import { useJournalStore } from '@/store/journal.js'
 import { useLocationStore } from '@/store/location.js'
 import dateUtil from '@/utils/date.js'
 import themeMixin from '@/mixins/theme.js'
+import { getMoodColor } from '@/constants/mood.js'
 
 export default {
 	components: { Icon },
@@ -158,7 +159,17 @@ export default {
 			if (this.activeFilter === 'location') return this.locationResults
 			if (this.activeFilter === 'journal') return this.journalResults
 			if (this.activeFilter === 'tag') return this.tagResults
-			return [...this.journalResults, ...this.locationResults]
+			// "全部"筛选：合并手账、地点、标签结果
+			return [...this.journalResults, ...this.locationResults, ...this.tagResults]
+		},
+		// 预计算高亮分段，避免模板内每次渲染都调用方法
+		highlightedResults() {
+			const kw = this.keyword
+			return this.resultList.map(item => ({
+				...item,
+				titleSegs: this.highlightText(item.title, kw),
+				subtitleSegs: this.highlightText(item.subtitle, kw)
+			}))
 		}
 	},
 	onLoad(options) {
@@ -266,14 +277,7 @@ export default {
 			this.searched = true
 		},
 		coverColorOf(journal) {
-			const moodMap = {
-				'😊': 'warm',
-				'🌸': 'lavender',
-				'☀️': 'gold',
-				'🌙': 'blue',
-				'🍂': 'green'
-			}
-			return moodMap[journal.mood] || 'warm'
+			return getMoodColor(journal.mood)
 		},
 		onFilter(key) {
 			this.activeFilter = key
@@ -392,7 +396,7 @@ export default {
 	align-items: center;
 	gap: 16rpx;
 	background: var(--surface);
-	border: 1.5rpx solid #E09080;
+	border: 1.5rpx solid var(--primary);
 	border-radius: 20rpx;
 	padding: 14rpx 24rpx;
 	box-shadow: 0 2rpx 12rpx rgba(224, 144, 128, 0.12);
@@ -423,33 +427,6 @@ export default {
 	color: #FFFFFF;
 	line-height: 1;
 	margin-top: -4rpx;
-}
-
-.filter-bar {
-	white-space: nowrap;
-	padding: 8rpx 32rpx 16rpx;
-}
-
-.filter-item {
-	display: inline-flex;
-	align-items: center;
-	padding: 8rpx 24rpx;
-	margin-right: 12rpx;
-	border-radius: 999rpx;
-	font-size: 24rpx;
-	font-weight: 500;
-}
-
-.filter-item.active {
-	background: rgba(224, 144, 128, 0.15);
-	color: #E09080;
-	font-weight: 600;
-}
-
-.filter-item.inactive {
-	background: transparent;
-	color: var(--text-secondary);
-	border: 1rpx solid var(--border-light);
 }
 
 .search-results {
@@ -491,22 +468,6 @@ export default {
 	justify-content: center;
 }
 
-.ph-warm {
-	background: linear-gradient(135deg, #EDCFC6, #D9AFA2);
-}
-.ph-blue {
-	background: linear-gradient(135deg, #BDD3E8, #9DBBD8);
-}
-.ph-lavender {
-	background: linear-gradient(135deg, #D2C5E2, #B5A8CE);
-}
-.ph-green {
-	background: linear-gradient(135deg, #C0D9B8, #9EC594);
-}
-.ph-gold {
-	background: linear-gradient(135deg, #E2D4B8, #CEBC98);
-}
-
 .lc-body {
 	flex: 1;
 	min-width: 0;
@@ -546,13 +507,13 @@ export default {
 }
 
 .badge-journal {
-	background: rgba(224, 144, 128, 0.15);
-	color: #E09080;
+	background: var(--primary-soft);
+	color: var(--primary);
 }
 
 .badge-location {
-	background: rgba(127, 163, 200, 0.15);
-	color: #7FA3C8;
+	background: var(--accent-soft);
+	color: var(--accent);
 }
 
 .highlight {

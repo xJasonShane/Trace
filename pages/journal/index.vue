@@ -49,10 +49,11 @@
 					>
 						<view class="lc-thumb" :class="'ph-' + getColorClass(j)">
 							<image
-								v-if="j.photos && j.photos.length > 0"
+								v-if="j.photos && j.photos.length > 0 && !brokenThumbs[j.id]"
 								class="lc-thumb-img"
 								:src="j.photos[0]"
 								mode="aspectFill"
+								lazy-load
 								@error="onThumbError(j)"
 							/>
 							<Icon v-else name="mountain" :size="32" color="#FFFFFF" :strokeWidth="1.4" />
@@ -101,6 +102,7 @@ import themeMixin from '@/mixins/theme.js'
 import { useJournalStore } from '@/store/journal.js'
 import { useLocationStore } from '@/store/location.js'
 import dateUtil from '@/utils/date.js'
+import { getMoodColor } from '@/constants/mood.js'
 
 export default {
 	components: { TabBar, Icon, EmptyState, DeleteModal },
@@ -122,7 +124,8 @@ export default {
 			],
 			deleteVisible: false,
 			deleteTargetId: '',
-			deleteTargetTitle: ''
+			deleteTargetTitle: '',
+			brokenThumbs: {}
 		}
 	},
 	computed: {
@@ -168,8 +171,7 @@ export default {
 			return dateUtil.formatRelative(date)
 		},
 		getColorClass(j) {
-			const moodMap = { '😊': 'warm', '🌸': 'blue', '☀️': 'gold', '🌙': 'lavender', '🍂': 'green' }
-			return moodMap[j.mood] || 'warm'
+			return getMoodColor(j.mood)
 		},
 		setFilter(value) {
 			this.currentFilter = value
@@ -216,10 +218,8 @@ export default {
 			}
 		},
 		onThumbError(journal) {
-			// 图片加载失败时清空该手账的首图引用，回退到默认图标
-			if (journal.photos && journal.photos.length > 0) {
-				journal.photos.splice(0, 1)
-			}
+			// 图片加载失败时仅记录失败状态，不修改 store 中的持久化数据
+			this.brokenThumbs = { ...this.brokenThumbs, [journal.id]: true }
 		}
 	}
 }
@@ -265,30 +265,6 @@ export default {
 .list-search-text {
 	font-size: 28rpx;
 	color: var(--text-tertiary);
-}
-
-.filter-bar {
-	white-space: nowrap;
-	padding: 8rpx 32rpx 16rpx;
-}
-
-.filter-item {
-	display: inline-flex;
-	align-items: center;
-	padding: 8rpx 24rpx;
-	margin-right: 12rpx;
-	border-radius: 999rpx;
-	border: 1rpx solid var(--border-light);
-	background: transparent;
-	font-size: 24rpx;
-	color: var(--text-secondary);
-}
-
-.filter-item.active {
-	background: rgba(224, 144, 128, 0.15);
-	border-color: transparent;
-	color: #E09080;
-	font-weight: 500;
 }
 
 .content {
@@ -342,12 +318,6 @@ export default {
 	border-radius: 20rpx;
 }
 
-.lc-thumb.ph-warm { background: linear-gradient(135deg, #EDCFC6, #D9AFA2); }
-.lc-thumb.ph-blue { background: linear-gradient(135deg, #BDD3E8, #9DBBD8); }
-.lc-thumb.ph-lavender { background: linear-gradient(135deg, #D2C5E2, #B5A8CE); }
-.lc-thumb.ph-green { background: linear-gradient(135deg, #C0D9B8, #9EC594); }
-.lc-thumb.ph-gold { background: linear-gradient(135deg, #E2D4B8, #CEBC98); }
-
 .lc-body {
 	flex: 1;
 	min-width: 0;
@@ -385,21 +355,6 @@ export default {
 
 .lc-delete:active {
 	background: rgba(200, 80, 74, 0.1);
-}
-
-.fab {
-	position: fixed;
-	right: 40rpx;
-	bottom: 160rpx;
-	width: 104rpx;
-	height: 104rpx;
-	background: #E09080;
-	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	box-shadow: 0 8rpx 28rpx rgba(224, 144, 128, 0.4);
-	z-index: 50;
 }
 
 .bottom-pad {

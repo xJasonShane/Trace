@@ -16,7 +16,7 @@
 			<!-- 头像区域 -->
 			<view class="edit-avatar-area">
 				<view class="edit-avatar" @tap="onAvatarTap">
-					<image v-if="form.avatar" class="avatar-img" :src="form.avatar" mode="aspectFill" />
+					<image v-if="form.avatar" class="avatar-img" :src="form.avatar" mode="aspectFill" lazy-load />
 					<Icon v-else name="profile" :size="60" :color="strokeWarm" :stroke-width="1.6" />
 					<view class="cam-badge">
 						<Icon name="camera" :size="24" :color="white" :stroke-width="2" />
@@ -125,6 +125,15 @@ export default {
 			white: '#FFFFFF'
 		}
 	},
+	created() {
+		this._timers = []
+	},
+	onUnload() {
+		if (this._timers) {
+			this._timers.forEach(id => clearTimeout(id))
+			this._timers = []
+		}
+	},
 	computed: {
 		today() {
 			return dateUtil.formatDate(new Date())
@@ -206,10 +215,10 @@ export default {
 				avatar: this.form.avatar
 			})
 			uni.showToast({ title: '保存成功', icon: 'success' })
-			setTimeout(() => {
+			this._timers.push(setTimeout(() => {
 				this.saving = false
 				uni.navigateBack()
-			}, 800)
+			}, 800))
 		}
 	}
 }
@@ -293,18 +302,18 @@ export default {
 	right: -4rpx;
 	width: 48rpx;
 	height: 48rpx;
-	background: #E09080;
+	background: var(--primary);
 	border-radius: 50%;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	border: 4rpx solid #FAF8F5;
+	border: 4rpx solid var(--bg);
 	box-shadow: 0 2rpx 8rpx rgba(224, 144, 128, 0.4);
 }
 
 .edit-link {
 	font-size: 26rpx;
-	color: #E09080;
+	color: var(--primary);
 	font-weight: 500;
 	padding: 8rpx 16rpx;
 }
@@ -314,44 +323,13 @@ export default {
 	padding: 16rpx 32rpx 48rpx;
 }
 
+/* form-group/form-label/form-input/form-textarea 复用全局样式 */
 .form-group {
 	margin-bottom: 24rpx;
 }
 
 .form-label {
-	display: block;
-	font-size: 26rpx;
-	font-weight: 600;
-	color: var(--text-secondary);
 	margin-bottom: 12rpx;
-}
-
-.form-input {
-	width: 100%;
-	padding: 24rpx 28rpx;
-	min-height: 88rpx;
-	line-height: 1.5;
-	border: 1rpx solid var(--border-light);
-	border-radius: 20rpx;
-	font-size: 28rpx;
-	font-family: -apple-system, 'PingFang SC', sans-serif;
-	background: var(--surface);
-	color: var(--fg);
-	box-sizing: border-box;
-}
-
-.form-textarea {
-	width: 100%;
-	padding: 24rpx 28rpx;
-	border: 1rpx solid var(--border-light);
-	border-radius: 20rpx;
-	font-size: 28rpx;
-	font-family: -apple-system, 'PingFang SC', sans-serif;
-	background: var(--surface);
-	color: var(--fg);
-	min-height: 120rpx;
-	line-height: 1.6;
-	box-sizing: border-box;
 }
 
 .picker-display {
@@ -372,8 +350,8 @@ export default {
 	justify-content: center;
 	width: 100%;
 	min-height: 88rpx;
-	background: #E09080;
-	color: #FFFFFF;
+	background: var(--primary);
+	color: var(--on-primary);
 	border-radius: 24rpx;
 	font-size: 30rpx;
 	font-weight: 600;

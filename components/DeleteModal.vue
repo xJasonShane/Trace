@@ -2,16 +2,16 @@
 	<view v-if="visible" class="modal-overlay" @tap="$emit('cancel')">
 		<view class="modal-box" @tap.stop>
 			<view class="modal-icon">
-				<Icon name="trash" :size="44" color="#C8504A" :strokeWidth="2" />
+				<Icon :name="iconName" :size="44" :color="iconColor" :strokeWidth="2" />
 			</view>
 			<text class="modal-title">{{ title }}</text>
 			<text class="modal-desc">{{ message }}</text>
 			<view class="modal-actions">
 				<view class="modal-btn modal-btn-cancel" @tap="$emit('cancel')">
-					<text class="modal-btn-text">取消</text>
+					<text class="modal-btn-text">{{ cancelText }}</text>
 				</view>
 				<view class="modal-btn modal-btn-danger" @tap="$emit('confirm')">
-					<text class="modal-btn-text-danger">删除</text>
+					<text class="modal-btn-text-danger">{{ confirmText }}</text>
 				</view>
 			</view>
 		</view>
@@ -36,6 +36,26 @@ export default {
 		message: {
 			type: String,
 			default: '确定要删除吗？删除后无法恢复。'
+		},
+		// 确认按钮文案，便于复用为通用确认弹窗
+		confirmText: {
+			type: String,
+			default: '删除'
+		},
+		// 取消按钮文案
+		cancelText: {
+			type: String,
+			default: '取消'
+		},
+		// 顶部图标名称（对应 Icon 组件 name prop）
+		iconName: {
+			type: String,
+			default: 'trash'
+		},
+		// 顶部图标颜色
+		iconColor: {
+			type: String,
+			default: '#C8504A'
 		}
 	},
 	emits: ['cancel', 'confirm']
@@ -114,7 +134,7 @@ export default {
 }
 
 .modal-btn-danger {
-	background: #C8504A;
+	background: var(--danger);
 }
 
 .modal-btn-text {
@@ -126,6 +146,6 @@ export default {
 .modal-btn-text-danger {
 	font-size: 28rpx;
 	font-weight: 600;
-	color: #FFFFFF;
+	color: var(--on-primary);
 }
 </style>

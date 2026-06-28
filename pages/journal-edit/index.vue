@@ -151,8 +151,8 @@
 
 		<!-- 保存按钮 -->
 		<view class="save-section">
-			<view class="save-btn" @tap="save">
-				<text class="save-text">保存手账</text>
+			<view class="save-btn" :class="{ disabled: saving }" @tap="save">
+				<text class="save-text">{{ saving ? '保存中…' : '保存手账' }}</text>
 			</view>
 		</view>
 	</view>
@@ -167,14 +167,18 @@ import themeMixin from '@/mixins/theme.js'
 import { useJournalStore } from '@/store/journal.js'
 import { useLocationStore } from '@/store/location.js'
 import dateUtil from '@/utils/date.js'
+import { RATING_DIMENSIONS, DEFAULT_RATINGS } from '@/constants/rating.js'
 
 export default {
 	components: { Icon, StarRating, MoodSelect, PhotoUpload },
 	mixins: [themeMixin],
+	setup() {
+		const journalStore = useJournalStore()
+		const locationStore = useLocationStore()
+		return { journalStore, locationStore }
+	},
 	data() {
 		return {
-			journalStore: useJournalStore(),
-			locationStore: useLocationStore(),
 			isEdit: false,
 			journalId: '',
 			locationId: '',
@@ -182,6 +186,7 @@ export default {
 			showSuggestions: false,
 			locationWarning: '',
 			validatedLocationId: '',
+			saving: false,
 			form: {
 				title: '',
 				locationName: '',
@@ -192,21 +197,22 @@ export default {
 				photos: [],
 				mood: '😊',
 				date: '',
-				ratings: {
-					environment: 5,
-					scenery: 5,
-					transport: 5,
-					experience: 5
-				},
+				ratings: { ...DEFAULT_RATINGS },
 				tags: []
 			},
 			locating: false,
-			ratingDimensions: [
-				{ key: 'environment', label: '环境' },
-				{ key: 'scenery', label: '风景' },
-				{ key: 'transport', label: '交通' },
-				{ key: 'experience', label: '体验' }
-			]
+			ratingDimensions: RATING_DIMENSIONS
+		}
+	},
+	created() {
+		// 非响应式定时器引用集合，页面销毁时统一清理
+		this._timers = []
+	},
+	onUnload() {
+		// 清理所有未完成的定时器，避免页面销毁后回调残留
+		if (this._timers) {
+			this._timers.forEach(id => clearTimeout(id))
+			this._timers = []
 		}
 	},
 	onLoad(options) {
@@ -215,8 +221,8 @@ export default {
 		// 默认日期为当天
 		this.form.date = dateUtil.formatDate(new Date())
 
-		// 从地图点选/长按跳转来，携带坐标
-		if (options && options.lat && options.lng) {
+		// 从地图点选/长按跳转来，携带坐标（用 !== undefined 判断，避免赤道/本初子午线坐标 0 被误判）
+		if (options && options.lat !== undefined && options.lng !== undefined) {
 			this.form.locationLat = parseFloat(options.lat)
 			this.form.locationLng = parseFloat(options.lng)
 			this.form.locationName = options.name || ''
@@ -261,10 +267,7 @@ export default {
 					this.form.date = journal.createdAt.substring(0, 10)
 				}
 				this.form.ratings = {
-					environment: 5,
-					scenery: 5,
-					transport: 5,
-					experience: 5,
+					...DEFAULT_RATINGS,
 					...(journal.ratings || {})
 				}
 				this.form.tags = journal.tags ? [...journal.tags] : []
@@ -279,7 +282,7 @@ export default {
 				}
 			} else {
 				uni.showToast({ title: '手账不存在', icon: 'none' })
-				setTimeout(() => this.goBack(), 1500)
+				this._timers.push(setTimeout(() => this.goBack(), 1500))
 			}
 		},
 		loadLocation() {
@@ -302,10 +305,10 @@ export default {
 		},
 		onLocationBlur() {
 			// 延迟关闭建议，确保 tap 事件先触发
-			setTimeout(() => {
+			this._timers.push(setTimeout(() => {
 				this.showSuggestions = false
 				this.validateLocationField()
-			}, 200)
+			}, 200))
 		},
 		selectLocation(loc) {
 			this.form.locationName = loc.name
@@ -455,7 +458,11 @@ export default {
 			return true
 		},
 		save() {
+			// 防止重复提交
+			if (this.saving) return
 			if (!this.validate()) return
+
+			this.saving = true
 
 			// 确定关联地点：使用 findOrCreate 自动创建新地点
 			let locationId = this.validatedLocationId || this.locationId
@@ -520,10 +527,11 @@ export default {
 				}
 
 				uni.showToast({ title: '保存成功', icon: 'success' })
-				setTimeout(() => {
+				this._timers.push(setTimeout(() => {
 					uni.navigateBack()
-				}, 1200)
+				}, 1200))
 			} else {
+				this.saving = false
 				uni.showToast({ title: '保存失败', icon: 'none' })
 			}
 		},
@@ -592,31 +600,6 @@ export default {
 	padding-bottom: calc(200rpx + env(safe-area-inset-bottom));
 }
 
-.form-group {
-	margin-bottom: 32rpx;
-}
-
-.form-label {
-	font-size: 26rpx;
-	font-weight: 600;
-	color: var(--text-secondary);
-	margin-bottom: 16rpx;
-	display: block;
-}
-
-.form-input {
-	width: 100%;
-	padding: 24rpx 28rpx;
-	min-height: 88rpx;
-	line-height: 1.5;
-	border: 1rpx solid var(--border-light);
-	border-radius: 20rpx;
-	font-size: 28rpx;
-	background: var(--surface);
-	color: var(--fg);
-	box-sizing: border-box;
-}
-
 .input-placeholder {
 	color: var(--text-tertiary);
 	font-size: 28rpx;
@@ -657,7 +640,7 @@ export default {
 	background: rgba(127, 163, 200, 0.08);
 	border-radius: 12rpx;
 	font-size: 22rpx;
-	color: #7FA3C8;
+	color: var(--accent);
 	font-family: ui-monospace, 'SF Mono', monospace;
 }
 
@@ -711,16 +694,7 @@ export default {
 }
 
 .form-textarea {
-	width: 100%;
-	padding: 24rpx 28rpx;
-	border: 1rpx solid var(--border-light);
-	border-radius: 20rpx;
-	font-size: 28rpx;
-	background: var(--surface);
-	color: var(--fg);
 	min-height: 240rpx;
-	line-height: 1.6;
-	box-sizing: border-box;
 }
 
 /* 日期选择器 */
@@ -741,32 +715,10 @@ export default {
 	color: var(--fg);
 }
 
-/* 评分维度 */
+/* 评分维度（结构复用全局，此处仅覆盖容器圆角与内边距） */
 .dim-ratings {
-	background: var(--surface);
-	border: 1rpx solid var(--border);
 	border-radius: 24rpx;
 	padding: 16rpx 28rpx;
-	box-shadow: 0 2rpx 16rpx var(--shadow);
-}
-
-.dim-row {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 24rpx 0;
-	border-bottom: 1rpx solid var(--border);
-}
-
-.dim-row:last-child {
-	border-bottom: none;
-	padding-bottom: 8rpx;
-}
-
-.dim-label {
-	font-size: 28rpx;
-	color: var(--fg);
-	font-weight: 500;
 }
 
 /* 标签 */
@@ -781,8 +733,8 @@ export default {
 	align-items: center;
 	gap: 8rpx;
 	padding: 10rpx 20rpx;
-	background: rgba(224, 144, 128, 0.15);
-	color: #E09080;
+	background: var(--primary-soft);
+	color: var(--primary);
 	border-radius: 999rpx;
 	font-size: 24rpx;
 	font-weight: 500;
@@ -818,14 +770,14 @@ export default {
 	right: 0;
 	padding: 24rpx 32rpx;
 	padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
-	background: rgba(250, 248, 245, 0.96);
+	background: var(--overlay);
 	box-shadow: 0 -2rpx 16rpx rgba(0, 0, 0, 0.04);
 }
 
 .save-btn {
 	width: 100%;
 	height: 96rpx;
-	background: #E09080;
+	background: var(--primary);
 	border-radius: 24rpx;
 	display: flex;
 	align-items: center;
@@ -833,8 +785,12 @@ export default {
 	box-shadow: 0 4rpx 16rpx rgba(224, 144, 128, 0.3);
 }
 
+.save-btn.disabled {
+	opacity: 0.6;
+}
+
 .save-text {
-	color: #FFFFFF;
+	color: var(--on-primary);
 	font-size: 32rpx;
 	font-weight: 600;
 	letter-spacing: 0.02em;

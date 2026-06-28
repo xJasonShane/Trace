@@ -2,12 +2,12 @@
 	<view class="photo-upload">
 		<view
 			v-for="(photo, index) in photos"
-			:key="index"
+			:key="photo"
 			class="photo-slot filled"
 			@tap="previewPhoto(index)"
 			@longpress="removePhoto(index)"
 		>
-			<image :src="photo" mode="aspectFill" class="photo-img" />
+			<image :src="photo" mode="aspectFill" class="photo-img" lazy-load />
 		</view>
 		<view
 			v-if="photos.length < maxCount"
@@ -35,7 +35,8 @@ export default {
 		},
 		maxCount: {
 			type: Number,
-			default: 9
+			default: 9,
+			validator: (v) => v > 0
 		}
 	},
 	emits: ['update:modelValue', 'change'],

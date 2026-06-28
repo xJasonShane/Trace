@@ -18,17 +18,6 @@ export const useJournalStore = defineStore('journal', {
 			return [...this.journals].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 		},
 
-		// 按日期分组
-		groupedJournals() {
-			const groups = {}
-			this.sortedJournals.forEach(j => {
-				const group = dateUtil.getDateGroup(j.createdAt)
-				if (!groups[group]) groups[group] = []
-				groups[group].push(j)
-			})
-			return groups
-		},
-
 		// 总数
 		totalCount() {
 			return this.journals.length
@@ -37,16 +26,6 @@ export const useJournalStore = defineStore('journal', {
 		// 照片总数
 		totalPhotos() {
 			return this.journals.reduce((sum, j) => sum + (j.photos ? j.photos.length : 0), 0)
-		},
-
-		// 按地点分组
-		journalsByLocation() {
-			const groups = {}
-			this.journals.forEach(j => {
-				if (!groups[j.locationId]) groups[j.locationId] = []
-				groups[j.locationId].push(j)
-			})
-			return groups
 		},
 
 		// 心情分布
@@ -195,17 +174,6 @@ export const useJournalStore = defineStore('journal', {
 				j.locationName.toLowerCase().includes(kw) ||
 				(j.tags && j.tags.some(t => t.toLowerCase().includes(kw)))
 			)
-		},
-
-		// 按筛选条件获取
-		filterBy(filter) {
-			let result = this.sortedJournals
-			if (filter === 'recent') {
-				result = result.slice(0, 10)
-			} else if (filter === 'photos') {
-				result = result.filter(j => j.photos && j.photos.length > 0)
-			}
-			return result
 		}
 	}
 })

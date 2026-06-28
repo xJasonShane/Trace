@@ -37,7 +37,8 @@ export default {
 		},
 		size: {
 			type: String,
-			default: 'md' // sm, md, lg
+			default: 'md',
+			validator: (v) => ['sm', 'md', 'lg'].includes(v)
 		},
 		showScore: {
 			type: Boolean,

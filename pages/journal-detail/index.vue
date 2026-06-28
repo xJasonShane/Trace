@@ -57,7 +57,7 @@
 					class="photo-item"
 					@tap="previewPhoto(index)"
 				>
-					<image :src="photo" mode="aspectFill" class="photo-img" />
+					<image :src="photo" mode="aspectFill" class="photo-img" lazy-load />
 				</view>
 			</view>
 
@@ -99,29 +99,28 @@ import StarRating from '@/components/StarRating.vue'
 import { useJournalStore } from '@/store/journal.js'
 import dateUtil from '@/utils/date.js'
 import themeMixin from '@/mixins/theme.js'
+import { RATING_DIMENSIONS, calcOverallRating } from '@/constants/rating.js'
+import { MOODS } from '@/constants/mood.js'
+
+// 心情 emoji → 标签映射（由常量文件派生，避免重复维护）
+const MOOD_LABEL_MAP = MOODS.reduce((map, m) => {
+	map[m.emoji] = m.label
+	return map
+}, {})
 
 export default {
 	components: { Icon, StarRating },
 	mixins: [themeMixin],
+	setup() {
+		const journalStore = useJournalStore()
+		return { journalStore }
+	},
 	data() {
 		return {
-			journalStore: useJournalStore(),
 			journalId: '',
 			statusBarHeight: 0,
 			loaded: false,
-			moodLabels: {
-				'😊': '愉快',
-				'🌸': '美好',
-				'☀️': '阳光',
-				'🌙': '宁静',
-				'🍂': '怀旧'
-			},
-			ratingDimensions: [
-				{ key: 'environment', label: '环境' },
-				{ key: 'scenery', label: '风景' },
-				{ key: 'transport', label: '交通' },
-				{ key: 'experience', label: '体验' }
-			]
+			ratingDimensions: RATING_DIMENSIONS
 		}
 	},
 	computed: {
@@ -132,16 +131,12 @@ export default {
 		overallRating() {
 			if (!this.journal) return 0
 			if (this.journal.overallRating) return this.journal.overallRating
-			if (this.journal.ratings) {
-				const vals = Object.values(this.journal.ratings)
-				if (vals.length === 0) return 0
-				return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10
-			}
+			if (this.journal.ratings) return calcOverallRating(this.journal.ratings)
 			return 0
 		},
 		moodLabel() {
 			if (!this.journal || !this.journal.mood) return '未设置'
-			return this.moodLabels[this.journal.mood] || '未设置'
+			return MOOD_LABEL_MAP[this.journal.mood] || '未设置'
 		}
 	},
 	onLoad(options) {
@@ -153,8 +148,7 @@ export default {
 		this.loaded = true
 	},
 	onShow() {
-		// 从编辑页返回时刷新数据
-		this.$forceUpdate()
+		// journal 为 computed，依赖 store 响应式数据，编辑后自动更新，无需 $forceUpdate
 	},
 	methods: {
 		goBack() {
@@ -299,8 +293,8 @@ export default {
 	align-items: center;
 	gap: 8rpx;
 	padding: 8rpx 20rpx;
-	background: rgba(224, 144, 128, 0.15);
-	color: #E09080;
+	background: var(--primary-soft);
+	color: var(--primary);
 	border-radius: 999rpx;
 	font-size: 24rpx;
 	font-weight: 500;
@@ -377,7 +371,7 @@ export default {
 	top: 0;
 	bottom: 0;
 	width: 6rpx;
-	background: linear-gradient(180deg, #D9A54A, #E09080);
+	background: linear-gradient(180deg, var(--star-active), var(--primary));
 	border-radius: 0 4rpx 4rpx 0;
 }
 
@@ -385,7 +379,7 @@ export default {
 	font-family: ui-monospace, 'SF Mono', monospace;
 	font-size: 72rpx;
 	font-weight: 800;
-	color: #D9A54A;
+	color: var(--star-active);
 	line-height: 1;
 	letter-spacing: -0.03em;
 }
@@ -402,72 +396,14 @@ export default {
 	font-weight: 500;
 }
 
-/* 评分维度 */
+/* 评分维度（结构复用全局 .dim-ratings/.dim-row/.dim-label，此处仅覆盖容器圆角与内边距） */
 .dim-ratings {
-	background: var(--surface);
-	border: 1rpx solid var(--border);
 	border-radius: 36rpx;
 	padding: 24rpx 32rpx;
-	box-shadow: 0 2rpx 16rpx var(--shadow);
 }
 
-.dim-title {
-	font-size: 28rpx;
-	font-weight: 600;
-	color: var(--fg);
-	margin-bottom: 16rpx;
-	padding-bottom: 16rpx;
-	border-bottom: 1rpx solid var(--border);
-}
-
-.dim-row {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 20rpx 0;
-	border-bottom: 1rpx solid var(--border);
-}
-
-.dim-row:last-child {
-	border-bottom: none;
-	padding-bottom: 0;
-}
-
-.dim-label {
-	font-size: 28rpx;
-	color: var(--fg);
-	font-weight: 500;
-}
-
-/* 错误状态 */
+/* 错误状态（基础样式复用全局 .error-state，此处仅覆盖间距） */
 .error-state {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
 	padding: 160rpx 24rpx;
-	text-align: center;
-}
-
-.error-title {
-	font-size: 32rpx;
-	font-weight: 600;
-	color: var(--fg);
-	margin-bottom: 8rpx;
-}
-
-.error-hint {
-	font-size: 26rpx;
-	color: var(--text-secondary);
-	margin-bottom: 32rpx;
-}
-
-.error-btn {
-	padding: 16rpx 48rpx;
-	background: #E09080;
-	color: #FFFFFF;
-	border-radius: 999rpx;
-	font-size: 28rpx;
-	font-weight: 500;
 }
 </style>

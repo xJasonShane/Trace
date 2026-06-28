@@ -94,7 +94,7 @@
 import TabBar from '@/components/TabBar.vue'
 import { useJournalStore } from '@/store/journal.js'
 import { useLocationStore } from '@/store/location.js'
-import { useProfileStore } from '@/store/profile.js'
+import { MOODS, getMoodColorHex } from '@/constants/mood.js'
 import themeMixin from '@/mixins/theme.js'
 
 export default {
@@ -103,20 +103,11 @@ export default {
 	setup() {
 		const journalStore = useJournalStore()
 		const locationStore = useLocationStore()
-		const profileStore = useProfileStore()
-		return { journalStore, locationStore, profileStore }
+		return { journalStore, locationStore }
 	},
 	data() {
 		return {
-			statusBarHeight: 0,
-			// 默认5种心情（确保始终展示）
-			defaultMoods: [
-				{ mood: '😊', color: '#E09080' },
-				{ mood: '🌸', color: '#7FA3C8' },
-				{ mood: '☀️', color: '#DDB86A' },
-				{ mood: '🌙', color: '#B8A0D0' },
-				{ mood: '🍂', color: '#A5A09A' }
-			]
+			statusBarHeight: 0
 		}
 	},
 	computed: {
@@ -139,14 +130,15 @@ export default {
 			return this.journalStore.monthlyTrend
 		},
 		moodList() {
+			// 心情列表由常量派生，颜色统一使用 getMoodColorHex，避免与全局心情-色调映射不一致
 			const dist = this.journalStore.moodDistribution
 			const map = {}
 			dist.forEach(d => { map[d.mood] = d })
-			return this.defaultMoods.map(dm => {
-				const d = map[dm.mood]
+			return MOODS.map(m => {
+				const d = map[m.emoji]
 				return {
-					mood: dm.mood,
-					color: dm.color,
+					mood: m.emoji,
+					color: getMoodColorHex(m.emoji),
 					percentage: d ? d.percentage : 0
 				}
 			})
@@ -305,7 +297,7 @@ export default {
 }
 
 .bar.active {
-	background: #E09080;
+	background: var(--primary);
 }
 
 .bar-label {
@@ -337,7 +329,7 @@ export default {
 	transform: translateY(-50%);
 	width: 8rpx;
 	height: 24rpx;
-	background: #E09080;
+	background: var(--primary);
 	border-radius: 4rpx;
 }
 

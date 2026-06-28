@@ -20,24 +20,6 @@ export const useProfileStore = defineStore('profile', {
 		})
 	}),
 
-	getters: {
-		// 手账数
-		journalCount() {
-			const journals = storage.get(storage.KEYS.JOURNALS, [])
-			return journals.length
-		},
-		// 地点数
-		locationCount() {
-			const locations = storage.get(storage.KEYS.LOCATIONS, [])
-			return locations.length
-		},
-		// 照片数
-		photoCount() {
-			const journals = storage.get(storage.KEYS.JOURNALS, [])
-			return journals.reduce((sum, j) => sum + (j.photos ? j.photos.length : 0), 0)
-		}
-	},
-
 	actions: {
 		// 保存资料
 		saveProfile(data) {
@@ -49,12 +31,6 @@ export const useProfileStore = defineStore('profile', {
 		saveSettings(data) {
 			this.settings = { ...this.settings, ...data }
 			storage.set(storage.KEYS.SETTINGS, this.settings)
-		},
-
-		// 更新头像
-		updateAvatar(path) {
-			this.profile.avatar = path
-			storage.set(storage.KEYS.PROFILE, this.profile)
 		}
 	}
 })

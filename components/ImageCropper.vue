@@ -87,6 +87,16 @@ export default {
 			scaleStart: 1
 		}
 	},
+	created() {
+		this._timers = []
+	},
+	beforeUnmount() {
+		// 组件销毁时清理定时器
+		if (this._timers) {
+			this._timers.forEach(id => clearTimeout(id))
+			this._timers = []
+		}
+	},
 	computed: {
 		imageStyle() {
 			return {
@@ -209,7 +219,7 @@ export default {
 			ctx.clearRect(0, 0, this.canvasSize, this.canvasSize)
 			ctx.drawImage(this.imageSrc, drawX, drawY, drawW, drawH)
 			ctx.draw(false, () => {
-				setTimeout(() => {
+				this._timers.push(setTimeout(() => {
 					uni.canvasToTempFilePath({
 						canvasId: 'cropCanvas',
 						x: 0,
@@ -227,7 +237,7 @@ export default {
 							uni.showToast({ title: '裁剪失败，请重试', icon: 'none' })
 						}
 					}, this)
-				}, 300)
+				}, 300))
 			})
 		}
 	}
@@ -284,7 +294,6 @@ export default {
 	bottom: 0;
 	border: 2rpx solid rgba(255, 255, 255, 0.6);
 	pointer-events: none;
-	box-shadow: 0 0 0 9999rpx rgba(0, 0, 0, 0);
 }
 
 .cropper-controls {

@@ -52,6 +52,12 @@ view, text, image, scroll-view, input, textarea, button {
 	--border: #EDEAE5;
 	--border-light: #E0DCD7;
 	--primary: #E09080;
+	--accent: #7FA3C8;
+	--star-active: #D9A54A;
+	--danger: #C8504A;
+	--primary-soft: rgba(224, 144, 128, 0.15);
+	--accent-soft: rgba(127, 163, 200, 0.15);
+	--on-primary: #FFFFFF;
 	--text-secondary: #7A756F;
 	--text-tertiary: #A5A09A;
 	--shadow: rgba(0, 0, 0, 0.06);
@@ -69,6 +75,12 @@ view, text, image, scroll-view, input, textarea, button {
 	--border: #3A3734;
 	--border-light: #44403C;
 	--primary: #E09080;
+	--accent: #8FB3D8;
+	--star-active: #E4B85A;
+	--danger: #D86A64;
+	--primary-soft: rgba(224, 144, 128, 0.18);
+	--accent-soft: rgba(127, 163, 200, 0.18);
+	--on-primary: #FFFFFF;
 	--text-secondary: #A5A09A;
 	--text-tertiary: #6E6A65;
 	--shadow: rgba(0, 0, 0, 0.3);
@@ -101,5 +113,167 @@ view, text, image, scroll-view, input, textarea, button {
 /* 安全区域 */
 .safe-bottom {
 	padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   共享组件样式（跨页面复用，避免重复定义）
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 照片占位渐变（journal / search / location-detail 共用） */
+.ph-warm { background: linear-gradient(135deg, #EDCFC6, #D9AFA2); }
+.ph-blue { background: linear-gradient(135deg, #BDD3E8, #9DBBD8); }
+.ph-lavender { background: linear-gradient(135deg, #D2C5E2, #B5A8CE); }
+.ph-green { background: linear-gradient(135deg, #C0D9B8, #9EC594); }
+.ph-gold { background: linear-gradient(135deg, #E2D4B8, #CEBC98); }
+
+/* 浮动按钮 FAB（journal / location-detail 共用，bottom/z-index 由页面覆盖） */
+.fab {
+	position: fixed;
+	right: 40rpx;
+	bottom: 160rpx;
+	width: 104rpx;
+	height: 104rpx;
+	background: var(--primary);
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 8rpx 28rpx rgba(224, 144, 128, 0.4);
+	z-index: 50;
+}
+
+/* 筛选标签栏（journal / search 共用） */
+.filter-bar {
+	white-space: nowrap;
+	padding: 8rpx 32rpx 16rpx;
+}
+
+.filter-item {
+	display: inline-flex;
+	align-items: center;
+	padding: 8rpx 24rpx;
+	margin-right: 12rpx;
+	border-radius: 999rpx;
+	border: 1rpx solid var(--border-light);
+	background: transparent;
+	font-size: 24rpx;
+	color: var(--text-secondary);
+}
+
+.filter-item.active {
+	background: var(--primary-soft);
+	border-color: transparent;
+	color: var(--primary);
+	font-weight: 500;
+}
+
+/* 表单元素（journal-edit / profile-edit 共用） */
+.form-group {
+	margin-bottom: 32rpx;
+}
+
+.form-label {
+	display: block;
+	font-size: 26rpx;
+	font-weight: 600;
+	color: var(--text-secondary);
+	margin-bottom: 16rpx;
+}
+
+.form-input {
+	width: 100%;
+	padding: 24rpx 28rpx;
+	min-height: 88rpx;
+	line-height: 1.5;
+	border: 1rpx solid var(--border-light);
+	border-radius: 20rpx;
+	font-size: 28rpx;
+	font-family: -apple-system, 'PingFang SC', sans-serif;
+	background: var(--surface);
+	color: var(--fg);
+	box-sizing: border-box;
+}
+
+.form-textarea {
+	width: 100%;
+	padding: 24rpx 28rpx;
+	border: 1rpx solid var(--border-light);
+	border-radius: 20rpx;
+	font-size: 28rpx;
+	font-family: -apple-system, 'PingFang SC', sans-serif;
+	background: var(--surface);
+	color: var(--fg);
+	min-height: 120rpx;
+	line-height: 1.6;
+	box-sizing: border-box;
+}
+
+/* 评分维度（journal-detail / journal-edit 共用） */
+.dim-ratings {
+	background: var(--surface);
+	border: 1rpx solid var(--border);
+	border-radius: 28rpx;
+	padding: 20rpx 32rpx;
+	box-shadow: 0 2rpx 16rpx var(--shadow);
+}
+
+.dim-title {
+	font-size: 28rpx;
+	font-weight: 600;
+	color: var(--fg);
+	margin-bottom: 16rpx;
+	padding-bottom: 16rpx;
+	border-bottom: 1rpx solid var(--border);
+}
+
+.dim-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 20rpx 0;
+	border-bottom: 1rpx solid var(--border);
+}
+
+.dim-row:last-child {
+	border-bottom: none;
+	padding-bottom: 0;
+}
+
+.dim-label {
+	font-size: 28rpx;
+	color: var(--fg);
+	font-weight: 500;
+}
+
+/* 错误状态（journal-detail / location-detail 共用） */
+.error-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 140rpx 24rpx;
+	text-align: center;
+}
+
+.error-title {
+	font-size: 32rpx;
+	font-weight: 600;
+	color: var(--fg);
+	margin-bottom: 8rpx;
+}
+
+.error-hint {
+	font-size: 26rpx;
+	color: var(--text-secondary);
+	margin-bottom: 32rpx;
+}
+
+.error-btn {
+	padding: 16rpx 48rpx;
+	background: var(--primary);
+	color: var(--on-primary);
+	border-radius: 999rpx;
+	font-size: 28rpx;
+	font-weight: 500;
 }
 </style>

@@ -23,6 +23,14 @@
 import Icon from './Icon.vue'
 import themeMixin from '@/mixins/theme.js'
 
+// 静态标签配置，无需响应式，冻结避免误修改
+const TABS = Object.freeze([
+	{ icon: 'map', label: '地图', path: '/pages/index/index' },
+	{ icon: 'journal', label: '手账', path: '/pages/journal/index' },
+	{ icon: 'stats', label: '统计', path: '/pages/stats/index' },
+	{ icon: 'profile', label: '我的', path: '/pages/profile/index' }
+])
+
 export default {
 	name: 'TabBar',
 	components: { Icon },
@@ -30,7 +38,8 @@ export default {
 	props: {
 		active: {
 			type: Number,
-			default: 0
+			default: 0,
+			validator: (v) => v >= 0 && v <= 3
 		},
 		// 是否使用 fixed 定位。在含原生组件（如 map）的页面中应设为 false，
 		// 作为 flex 子元素布局，避免被原生组件覆盖。
@@ -39,15 +48,8 @@ export default {
 			default: true
 		}
 	},
-	data() {
-		return {
-			tabs: [
-				{ icon: 'map', label: '地图', path: '/pages/index/index' },
-				{ icon: 'journal', label: '手账', path: '/pages/journal/index' },
-				{ icon: 'stats', label: '统计', path: '/pages/stats/index' },
-				{ icon: 'profile', label: '我的', path: '/pages/profile/index' }
-			]
-		}
+	setup() {
+		return { tabs: TABS }
 	},
 	computed: {
 		activeColor() {

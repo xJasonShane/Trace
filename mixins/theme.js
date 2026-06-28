@@ -15,10 +15,6 @@ export default {
 		themeFgColor() {
 			return this.themeClass === 'theme-dark' ? '#E8E4E0' : '#2D2A26'
 		},
-		// 次要文字颜色
-		themeSecondaryColor() {
-			return this.themeClass === 'theme-dark' ? '#A5A09A' : '#7A756F'
-		},
 		// 三级文字颜色（浅灰）
 		themeTertiaryColor() {
 			return this.themeClass === 'theme-dark' ? '#6E6A65' : '#A5A09A'

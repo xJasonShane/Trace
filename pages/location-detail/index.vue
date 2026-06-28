@@ -54,12 +54,13 @@
 				class="journal-item"
 				@tap="goToJournal(journal.id)"
 			>
-				<view class="ji-thumb" :class="getThumbClass(index)">
+				<view class="ji-thumb" :class="'ph-' + getThumbClass(journal)">
 					<image
 						v-if="journal.photos && journal.photos.length > 0"
 						:src="journal.photos[0]"
 						mode="aspectFill"
 						class="ji-thumb-img"
+						lazy-load
 					/>
 					<Icon v-else name="mountain" :size="36" color="#FFFFFF" :strokeWidth="1.4" />
 				</view>
@@ -99,17 +100,30 @@ import { useJournalStore } from '@/store/journal.js'
 import { useLocationStore } from '@/store/location.js'
 import dateUtil from '@/utils/date.js'
 import themeMixin from '@/mixins/theme.js'
+import { getMoodColor } from '@/constants/mood.js'
 
 export default {
 	components: { Icon, StarRating },
 	mixins: [themeMixin],
+	setup() {
+		const journalStore = useJournalStore()
+		const locationStore = useLocationStore()
+		return { journalStore, locationStore }
+	},
 	data() {
 		return {
-			journalStore: useJournalStore(),
-			locationStore: useLocationStore(),
 			locationId: '',
 			statusBarHeight: 0,
 			loaded: false
+		}
+	},
+	created() {
+		this._timers = []
+	},
+	onUnload() {
+		if (this._timers) {
+			this._timers.forEach(id => clearTimeout(id))
+			this._timers = []
 		}
 	},
 	computed: {
@@ -198,7 +212,7 @@ export default {
 					if (res.confirm) {
 						this.locationStore.deleteLocation(this.locationId)
 						uni.showToast({ title: '已删除', icon: 'success' })
-						setTimeout(() => this.goBack(), 1200)
+						this._timers.push(setTimeout(() => this.goBack(), 1200))
 					}
 				}
 			})
@@ -206,9 +220,9 @@ export default {
 		formatDate(date) {
 			return dateUtil.formatDateDot(date)
 		},
-		getThumbClass(index) {
-			const colors = ['ph-warm', 'ph-blue', 'ph-lavender', 'ph-green']
-			return colors[index % colors.length]
+		getThumbClass(journal) {
+			// 基于心情映射颜色，保证同一手账颜色稳定，不随列表顺序变化
+			return getMoodColor(journal.mood)
 		}
 	}
 }
@@ -305,7 +319,7 @@ export default {
 	font-family: ui-monospace, 'SF Mono', monospace;
 	font-size: 36rpx;
 	font-weight: 700;
-	color: #D9A54A;
+	color: var(--star-active);
 	letter-spacing: -0.02em;
 }
 
@@ -334,7 +348,7 @@ export default {
 	font-family: ui-monospace, 'SF Mono', monospace;
 	font-size: 44rpx;
 	font-weight: 800;
-	color: #E09080;
+	color: var(--primary);
 	letter-spacing: -0.02em;
 	line-height: 1;
 	display: block;
@@ -370,7 +384,7 @@ export default {
 	display: inline-block;
 	width: 8rpx;
 	height: 32rpx;
-	background: #E09080;
+	background: var(--primary);
 	border-radius: 4rpx;
 }
 
@@ -400,22 +414,6 @@ export default {
 .ji-thumb-img {
 	width: 100%;
 	height: 100%;
-}
-
-.ph-warm {
-	background: linear-gradient(135deg, #EDCFC6, #D9AFA2);
-}
-
-.ph-blue {
-	background: linear-gradient(135deg, #BDD3E8, #9DBBD8);
-}
-
-.ph-lavender {
-	background: linear-gradient(135deg, #D2C5E2, #B5A8CE);
-}
-
-.ph-green {
-	background: linear-gradient(135deg, #C0D9B8, #9EC594);
 }
 
 .ji-body {
@@ -485,51 +483,15 @@ export default {
 	color: var(--text-secondary);
 }
 
-/* 错误状态 */
+/* 错误状态（基础样式复用全局 .error-state，此处仅覆盖间距） */
 .error-state {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
 	padding: 120rpx 24rpx;
-	text-align: center;
 }
 
-.error-title {
-	font-size: 32rpx;
-	font-weight: 600;
-	color: var(--fg);
-	margin-bottom: 8rpx;
-}
-
-.error-hint {
-	font-size: 26rpx;
-	color: var(--text-secondary);
-	margin-bottom: 32rpx;
-}
-
-.error-btn {
-	padding: 16rpx 48rpx;
-	background: #E09080;
-	color: #FFFFFF;
-	border-radius: 999rpx;
-	font-size: 28rpx;
-	font-weight: 500;
-}
-
-/* FAB 按钮 */
+/* FAB 按钮（覆盖全局 .fab 的 bottom 与 z-index） */
 .fab {
-	position: fixed;
 	right: 32rpx;
 	bottom: 64rpx;
-	width: 104rpx;
-	height: 104rpx;
-	border-radius: 50%;
-	background: #E09080;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	box-shadow: 0 8rpx 28rpx rgba(224, 144, 128, 0.4);
 	z-index: 100;
 }
 </style>

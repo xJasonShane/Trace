@@ -69,6 +69,15 @@
 					{{ selectedLocation.name }} · {{ recentJournalTimeText }}
 				</cover-view>
 
+				<!-- 统计数据 -->
+				<cover-view class="mc-stats" :style="coverSubStyle">
+					<cover-view class="mc-stat">{{ journalCount }} 篇手账</cover-view>
+					<cover-view class="mc-stat-divide">·</cover-view>
+					<cover-view class="mc-stat">{{ photoCount }} 张照片</cover-view>
+					<cover-view class="mc-stat-divide">·</cover-view>
+					<cover-view class="mc-stat">到访 {{ visitCount }} 次</cover-view>
+				</cover-view>
+
 				<!-- 评分区域 -->
 				<cover-view class="mc-rating">
 					<cover-view class="mc-score">{{ ratingText }}</cover-view>
@@ -98,8 +107,6 @@
 
 <script>
 import TabBar from '@/components/TabBar.vue'
-import Icon from '@/components/Icon.vue'
-import StarRating from '@/components/StarRating.vue'
 import themeMixin from '@/mixins/theme.js'
 import { useLocationStore } from '@/store/location.js'
 import { useJournalStore } from '@/store/journal.js'
@@ -114,7 +121,7 @@ const COVER_ICONS = {
 }
 
 export default {
-	components: { TabBar, Icon, StarRating },
+	components: { TabBar },
 	mixins: [themeMixin],
 	setup() {
 		const locationStore = useLocationStore()
@@ -195,18 +202,24 @@ export default {
 			if (journals.length === 0) return '暂无'
 			return dateUtil.formatRelative(journals[0].createdAt)
 		},
-		// 当前选中地点的评分（从关联手账动态计算）
+		// 当前选中地点的评分（复用 selectedLocationJournals 缓存，避免重复查询）
 		currentRating() {
-			if (!this.selectedLocation) return 0
-			const journals = this.journalStore.getJournalsByLocation(this.selectedLocation.id)
+			const journals = this.selectedLocationJournals
 			if (journals.length === 0) return 0
 			const sum = journals.reduce((s, j) => s + (j.overallRating || 0), 0)
 			return Math.round((sum / journals.length) * 10) / 10
 		},
-		// 当前选中地点的手账数量（动态计算）
-		locationJournalCount() {
-			if (!this.selectedLocation) return 0
-			return this.journalStore.getJournalsByLocation(this.selectedLocation.id).length
+		// 选中地点的手账数量
+		journalCount() {
+			return this.selectedLocationJournals.length
+		},
+		// 选中地点的照片总数
+		photoCount() {
+			return this.selectedLocationJournals.reduce((sum, j) => sum + (j.photos ? j.photos.length : 0), 0)
+		},
+		// 选中地点的到访次数
+		visitCount() {
+			return this.selectedLocation ? (this.selectedLocation.visitCount || 1) : 0
 		},
 		ratingText() {
 			return this.currentRating > 0 ? this.currentRating.toFixed(1) : '暂无'
@@ -304,9 +317,10 @@ export default {
 					// 有手账记录：展开缩略二级页面，卡片内提供「写新手账」入口
 					this.selectedLocation = loc
 					this.cardVisible = true
-					this.$nextTick(() => {
+					// 延迟一帧执行动画，确保原生 cover-view 渲染完成，避免首帧掉帧卡顿
+					setTimeout(() => {
 						this.runCardEnterAnimation()
-					})
+					}, 30)
 				}
 			} else {
 				console.warn('[onMarkerTap] marker索引越界: idx=' + idx + ', locations.length=' + this.displayLocations.length)
@@ -374,8 +388,9 @@ export default {
 			overlayAnim.opacity(0).step()
 			this.overlayAnimationData = overlayAnim.export()
 
-			const cardHeight = uni.getSystemInfoSync().windowHeight * 0.45
-			animation.translateY(cardHeight).opacity(0).step()
+			// 退出距离使用整个窗口高度，确保卡片完全移出屏幕底部
+			const windowHeight = uni.getSystemInfoSync().windowHeight
+			animation.translateY(windowHeight).opacity(0).step()
 			this.cardAnimationData = animation.export()
 
 			setTimeout(() => {
@@ -567,7 +582,28 @@ export default {
 .mc-meta {
 	font-size: 24rpx;
 	line-height: 32rpx;
+	margin-bottom: 12rpx;
+}
+
+/* 统计数据行 */
+.mc-stats {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	flex-wrap: wrap;
 	margin-bottom: 16rpx;
+}
+
+.mc-stat {
+	font-size: 22rpx;
+	line-height: 30rpx;
+}
+
+.mc-stat-divide {
+	font-size: 22rpx;
+	line-height: 30rpx;
+	margin: 0 10rpx;
+	opacity: 0.5;
 }
 
 /* 评分 */

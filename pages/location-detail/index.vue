@@ -100,11 +100,14 @@ import { useJournalStore } from '@/store/journal.js'
 import { useLocationStore } from '@/store/location.js'
 import dateUtil from '@/utils/date.js'
 import themeMixin from '@/mixins/theme.js'
+import statusbarMixin from '@/mixins/statusbar.js'
+import timersMixin from '@/mixins/timers.js'
+import { safeBack } from '@/utils/nav.js'
 import { getMoodColor } from '@/constants/mood.js'
 
 export default {
 	components: { Icon, StarRating },
-	mixins: [themeMixin],
+	mixins: [themeMixin, statusbarMixin, timersMixin],
 	setup() {
 		const journalStore = useJournalStore()
 		const locationStore = useLocationStore()
@@ -113,19 +116,10 @@ export default {
 	data() {
 		return {
 			locationId: '',
-			statusBarHeight: 0,
 			loaded: false
 		}
 	},
-	created() {
-		this._timers = []
-	},
-	onUnload() {
-		if (this._timers) {
-			this._timers.forEach(id => clearTimeout(id))
-			this._timers = []
-		}
-	},
+	// _timers 由 timersMixin 提供
 	computed: {
 		location() {
 			if (!this.locationId) return null
@@ -155,8 +149,7 @@ export default {
 		}
 	},
 	onLoad(options) {
-		const systemInfo = uni.getSystemInfoSync()
-		this.statusBarHeight = systemInfo.statusBarHeight || 20
+		// statusBarHeight 由 statusbarMixin 提供
 		// 重置状态，避免上一次的预设数据残留
 		this.locationId = ''
 		this.loaded = false
@@ -174,12 +167,7 @@ export default {
 	},
 	methods: {
 		goBack() {
-			const pages = getCurrentPages()
-			if (pages.length > 1) {
-				uni.navigateBack()
-			} else {
-				uni.reLaunch({ url: '/pages/index/index' })
-			}
+			safeBack('/pages/index/index')
 		},
 		goToJournal(id) {
 			uni.navigateTo({

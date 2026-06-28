@@ -99,6 +99,7 @@ import Icon from '@/components/Icon.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import DeleteModal from '@/components/DeleteModal.vue'
 import themeMixin from '@/mixins/theme.js'
+import statusbarMixin from '@/mixins/statusbar.js'
 import { useJournalStore } from '@/store/journal.js'
 import { useLocationStore } from '@/store/location.js'
 import dateUtil from '@/utils/date.js'
@@ -106,7 +107,7 @@ import { getMoodColor } from '@/constants/mood.js'
 
 export default {
 	components: { TabBar, Icon, EmptyState, DeleteModal },
-	mixins: [themeMixin],
+	mixins: [themeMixin, statusbarMixin],
 	setup() {
 		const journalStore = useJournalStore()
 		const locationStore = useLocationStore()
@@ -114,7 +115,6 @@ export default {
 	},
 	data() {
 		return {
-			statusBarHeight: 0,
 			currentFilter: 'all',
 			filters: [
 				{ label: '全部', value: 'all' },
@@ -130,7 +130,7 @@ export default {
 	},
 	computed: {
 		searchIconColor() {
-			return this.themeClass === 'theme-dark' ? '#6E6A65' : '#A5A09A'
+			return this.themeTertiaryColor
 		},
 		filteredJournals() {
 			const all = this.journalStore.sortedJournals
@@ -156,8 +156,7 @@ export default {
 		}
 	},
 	onLoad(options) {
-		const sys = uni.getSystemInfoSync()
-		this.statusBarHeight = sys.statusBarHeight || 20
+		// statusBarHeight 由 statusbarMixin 提供
 		// 支持从"我的页面"跳转时携带筛选条件
 		if (options && options.filter && this.filters.some(f => f.value === options.filter)) {
 			this.currentFilter = options.filter

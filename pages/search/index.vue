@@ -120,14 +120,16 @@ import { useJournalStore } from '@/store/journal.js'
 import { useLocationStore } from '@/store/location.js'
 import dateUtil from '@/utils/date.js'
 import themeMixin from '@/mixins/theme.js'
+import statusbarMixin from '@/mixins/statusbar.js'
 import { getMoodColor } from '@/constants/mood.js'
+import { getCoverStrokeColor } from '@/constants/cover.js'
+import { safeBack } from '@/utils/nav.js'
 
 export default {
 	components: { Icon },
-	mixins: [themeMixin],
+	mixins: [themeMixin, statusbarMixin],
 	data() {
 		return {
-			statusBarHeight: 20,
 			keyword: '',
 			activeFilter: 'all',
 			autoFocus: false,
@@ -153,7 +155,7 @@ export default {
 			return this.themeTertiaryColor
 		},
 		placeholderStyle() {
-			return this.themeClass === 'theme-dark' ? 'color: #6E6A65;' : 'color: #A5A09A;'
+			return this.themePlaceholderStyle
 		},
 		resultList() {
 			if (this.activeFilter === 'location') return this.locationResults
@@ -173,9 +175,7 @@ export default {
 		}
 	},
 	onLoad(options) {
-		const sysInfo = uni.getSystemInfoSync()
-		this.statusBarHeight = sysInfo.statusBarHeight || 20
-
+		// statusBarHeight 由 statusbarMixin 提供
 		// 支持从"我的页面"跳转时携带筛选条件
 		if (options && options.filter && this.filterTabs.some(t => t.key === options.filter)) {
 			this.activeFilter = options.filter
@@ -311,7 +311,7 @@ export default {
 			this.searched = true
 		},
 		onBack() {
-			uni.navigateBack()
+			safeBack('/pages/index/index')
 		},
 		onCardTap(item) {
 			if (item.type === 'journal') {
@@ -347,14 +347,7 @@ export default {
 			return result
 		},
 		strokeColor(coverColor) {
-			const map = {
-				warm: '#C09080',
-				blue: '#7A9AB5',
-				lavender: '#9880B0',
-				green: '#C09080',
-				gold: '#B8A068'
-			}
-			return map[coverColor] || '#C09080'
+			return getCoverStrokeColor(coverColor)
 		}
 	}
 }

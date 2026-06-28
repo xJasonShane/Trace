@@ -104,13 +104,15 @@ import { useProfileStore } from '@/store/profile.js'
 import imageUtil from '@/utils/image.js'
 import dateUtil from '@/utils/date.js'
 import themeMixin from '@/mixins/theme.js'
+import statusbarMixin from '@/mixins/statusbar.js'
+import timersMixin from '@/mixins/timers.js'
+import { safeBack } from '@/utils/nav.js'
 
 export default {
 	components: { Icon, ImageCropper },
-	mixins: [themeMixin],
+	mixins: [themeMixin, statusbarMixin, timersMixin],
 	data() {
 		return {
-			statusBarHeight: 20,
 			form: {
 				nickname: '',
 				bio: '',
@@ -125,33 +127,23 @@ export default {
 			white: '#FFFFFF'
 		}
 	},
-	created() {
-		this._timers = []
-	},
-	onUnload() {
-		if (this._timers) {
-			this._timers.forEach(id => clearTimeout(id))
-			this._timers = []
-		}
-	},
+	// _timers 由 timersMixin 提供
 	computed: {
 		today() {
 			return dateUtil.formatDate(new Date())
 		},
 		fg() {
-			return this.themeClass === 'theme-dark' ? '#E8E4E0' : '#2D2A26'
+			return this.themeFgColor
 		},
 		fgTertiary() {
-			return this.themeClass === 'theme-dark' ? '#6E6A65' : '#A5A09A'
+			return this.themeTertiaryColor
 		},
 		placeholderStyle() {
-			return this.themeClass === 'theme-dark' ? 'color: #6E6A65;' : 'color: #A5A09A;'
+			return this.themePlaceholderStyle
 		}
 	},
 	onLoad() {
-		const sysInfo = uni.getSystemInfoSync()
-		this.statusBarHeight = sysInfo.statusBarHeight || 20
-
+		// statusBarHeight 由 statusbarMixin 提供
 		const profileStore = useProfileStore()
 		const p = profileStore.profile || {}
 		this.form = {
@@ -164,7 +156,7 @@ export default {
 	},
 	methods: {
 		onBack() {
-			uni.navigateBack()
+			safeBack('/pages/profile/index')
 		},
 		async onAvatarTap() {
 			try {

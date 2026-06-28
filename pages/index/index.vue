@@ -108,8 +108,10 @@
 <script>
 import TabBar from '@/components/TabBar.vue'
 import themeMixin from '@/mixins/theme.js'
+import statusbarMixin from '@/mixins/statusbar.js'
 import { useLocationStore } from '@/store/location.js'
 import { useJournalStore } from '@/store/journal.js'
+import { MOOD_COLOR_HEX } from '@/constants/mood.js'
 import dateUtil from '@/utils/date.js'
 
 // cover-view 内部无法使用自定义组件，需内联 SVG 图标路径
@@ -122,7 +124,7 @@ const COVER_ICONS = {
 
 export default {
 	components: { TabBar },
-	mixins: [themeMixin],
+	mixins: [themeMixin, statusbarMixin],
 	setup() {
 		const locationStore = useLocationStore()
 		const journalStore = useJournalStore()
@@ -130,7 +132,6 @@ export default {
 	},
 	data() {
 		return {
-			statusBarHeight: 0,
 			center: { latitude: 30.27, longitude: 120.15 },
 			selectedLocation: null,
 			markerTapPending: false,
@@ -141,10 +142,10 @@ export default {
 	},
 	computed: {
 		searchIconColor() {
-			return this.themeClass === 'theme-dark' ? '#6E6A65' : '#A5A09A'
+			return this.themeTertiaryColor
 		},
 		locateIconColor() {
-			return this.themeClass === 'theme-dark' ? '#A5A09A' : '#7A756F'
+			return this.themeSecondaryColor
 		},
 		coverBoxStyle() {
 			if (this.themeClass === 'theme-dark') {
@@ -247,8 +248,7 @@ export default {
 		}
 	},
 	onLoad() {
-		const sys = uni.getSystemInfoSync()
-		this.statusBarHeight = sys.statusBarHeight || 20
+		// statusBarHeight 由 statusbarMixin 提供
 	},
 	onShow() {
 		// 从二级页面返回时，刷新选中地点数据（手账可能已变更）
@@ -272,8 +272,10 @@ export default {
 		}
 	},
 	onUnload() {
-		// 清理 marker 点击防抖定时器，避免页面销毁后回调残留
+		// 清理所有定时器，避免页面销毁后回调残留
 		clearTimeout(this._markerTapTimer)
+		clearTimeout(this._cardEnterTimer)
+		clearTimeout(this._cardExitTimer)
 	},
 	methods: {
 		// 生成 SVG data URI，供 cover-image 使用
@@ -318,7 +320,7 @@ export default {
 					this.selectedLocation = loc
 					this.cardVisible = true
 					// 延迟一帧执行动画，确保原生 cover-view 渲染完成，避免首帧掉帧卡顿
-					setTimeout(() => {
+					this._cardEnterTimer = setTimeout(() => {
 						this.runCardEnterAnimation()
 					}, 30)
 				}
@@ -393,7 +395,7 @@ export default {
 			animation.translateY(windowHeight).opacity(0).step()
 			this.cardAnimationData = animation.export()
 
-			setTimeout(() => {
+			this._cardExitTimer = setTimeout(() => {
 				this.cardVisible = false
 				this.selectedLocation = null
 				if (callback) callback()

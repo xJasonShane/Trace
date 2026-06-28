@@ -104,6 +104,8 @@
 import TabBar from '@/components/TabBar.vue'
 import Icon from '@/components/Icon.vue'
 import themeMixin from '@/mixins/theme.js'
+import statusbarMixin from '@/mixins/statusbar.js'
+import timersMixin from '@/mixins/timers.js'
 import { useProfileStore } from '@/store/profile.js'
 import { useJournalStore } from '@/store/journal.js'
 import { useLocationStore } from '@/store/location.js'
@@ -112,7 +114,7 @@ import dateUtil from '@/utils/date.js'
 
 export default {
 	components: { TabBar, Icon },
-	mixins: [themeMixin],
+	mixins: [themeMixin, statusbarMixin, timersMixin],
 	setup() {
 		const profileStore = useProfileStore()
 		const journalStore = useJournalStore()
@@ -121,21 +123,11 @@ export default {
 	},
 	data() {
 		return {
-			statusBarHeight: 0,
 			backing: false,
 			backupTick: 0
 		}
 	},
-	created() {
-		// 非响应式定时器引用集合，页面销毁时统一清理
-		this._timers = []
-	},
-	onUnload() {
-		if (this._timers) {
-			this._timers.forEach(id => clearTimeout(id))
-			this._timers = []
-		}
-	},
+	// _timers 由 timersMixin 提供
 	computed: {
 		profile() {
 			return this.profileStore.profile
@@ -161,8 +153,7 @@ export default {
 		}
 	},
 	onLoad() {
-		const sys = uni.getSystemInfoSync()
-		this.statusBarHeight = sys.statusBarHeight || 20
+		// statusBarHeight 由 statusbarMixin 提供
 	},
 	methods: {
 		toggleNotify() {

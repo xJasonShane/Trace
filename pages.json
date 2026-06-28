@@ -3,63 +3,54 @@
     {
       "path": "pages/index/index",
       "style": {
-        "navigationStyle": "custom",
         "navigationBarTitleText": "拾光手账"
       }
     },
     {
       "path": "pages/journal/index",
       "style": {
-        "navigationStyle": "custom",
         "navigationBarTitleText": "我的手账"
       }
     },
     {
       "path": "pages/stats/index",
       "style": {
-        "navigationStyle": "custom",
         "navigationBarTitleText": "统计"
       }
     },
     {
       "path": "pages/profile/index",
       "style": {
-        "navigationStyle": "custom",
         "navigationBarTitleText": "我的"
       }
     },
     {
       "path": "pages/location-detail/index",
       "style": {
-        "navigationStyle": "custom",
         "navigationBarTitleText": "地点详情"
       }
     },
     {
       "path": "pages/journal-detail/index",
       "style": {
-        "navigationStyle": "custom",
         "navigationBarTitleText": "手账详情"
       }
     },
     {
       "path": "pages/journal-edit/index",
       "style": {
-        "navigationStyle": "custom",
         "navigationBarTitleText": "新建手账"
       }
     },
     {
       "path": "pages/search/index",
       "style": {
-        "navigationStyle": "custom",
         "navigationBarTitleText": "搜索"
       }
     },
     {
       "path": "pages/profile-edit/index",
       "style": {
-        "navigationStyle": "custom",
         "navigationBarTitleText": "编辑资料"
       }
     }

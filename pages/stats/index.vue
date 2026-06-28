@@ -52,10 +52,10 @@
 					>
 						<view class="bar-wrap">
 							<view
-								class="bar"
-								:class="{ active: idx === monthlyTrend.length - 1 }"
-								:style="{ height: getBarHeight(item.count) + 'rpx' }"
-							></view>
+							class="bar"
+							:class="{ active: idx === monthlyTrend.length - 1 }"
+							:style="{ height: item.height + 'rpx' }"
+						></view>
 						</view>
 						<text class="bar-label">{{ item.month }}月</text>
 					</view>
@@ -96,19 +96,15 @@ import { useJournalStore } from '@/store/journal.js'
 import { useLocationStore } from '@/store/location.js'
 import { MOODS, getMoodColorHex } from '@/constants/mood.js'
 import themeMixin from '@/mixins/theme.js'
+import statusbarMixin from '@/mixins/statusbar.js'
 
 export default {
 	components: { TabBar },
-	mixins: [themeMixin],
+	mixins: [themeMixin, statusbarMixin],
 	setup() {
 		const journalStore = useJournalStore()
 		const locationStore = useLocationStore()
 		return { journalStore, locationStore }
-	},
-	data() {
-		return {
-			statusBarHeight: 0
-		}
 	},
 	computed: {
 		totalCount() {
@@ -127,7 +123,17 @@ export default {
 			return this.journalStore.thisMonthCount
 		},
 		monthlyTrend() {
-			return this.journalStore.monthlyTrend
+			// 在 computed 中预先计算 barHeight，避免在 v-for 中调用方法
+			const trend = this.journalStore.monthlyTrend
+			const counts = trend.map(t => t.count)
+			const maxCount = Math.max(...counts, 1)
+			const minH = 20
+			const maxH = 180
+			return trend.map(item => ({
+				month: item.month,
+				count: item.count,
+				height: item.count === 0 ? minH : Math.max(minH, Math.round((item.count / maxCount) * maxH))
+			}))
 		},
 		moodList() {
 			// 心情列表由常量派生，颜色统一使用 getMoodColorHex，避免与全局心情-色调映射不一致
@@ -142,22 +148,6 @@ export default {
 					percentage: d ? d.percentage : 0
 				}
 			})
-		},
-		maxCount() {
-			const counts = this.monthlyTrend.map(t => t.count)
-			return Math.max(...counts, 1)
-		}
-	},
-	onLoad() {
-		const sys = uni.getSystemInfoSync()
-		this.statusBarHeight = sys.statusBarHeight || 20
-	},
-	methods: {
-		getBarHeight(count) {
-			const minH = 20
-			const maxH = 180
-			if (count === 0) return minH
-			return Math.max(minH, Math.round((count / this.maxCount) * maxH))
 		}
 	}
 }

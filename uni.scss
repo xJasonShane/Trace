@@ -23,7 +23,11 @@ $muted: #7A756F;
 $border: #E0DCD7;
 $border-light: #EDEAE5;
 
-/* 主题色 */
+/* 主题色
+   注意：scss 的 $accent 与 App.vue 的 CSS 变量 --accent 含义不同：
+   - $accent          主色（橙红，对应 CSS --primary）
+   - $accent-secondary 辅色（蓝，对应 CSS --accent）
+   使用时请以颜色值为准，避免命名混淆。 */
 $accent: $seed-primary;
 $accent-secondary: $seed-accent;
 $accent-tertiary: #B8A0D0;

@@ -99,6 +99,8 @@ import StarRating from '@/components/StarRating.vue'
 import { useJournalStore } from '@/store/journal.js'
 import dateUtil from '@/utils/date.js'
 import themeMixin from '@/mixins/theme.js'
+import statusbarMixin from '@/mixins/statusbar.js'
+import { safeBack } from '@/utils/nav.js'
 import { RATING_DIMENSIONS, calcOverallRating } from '@/constants/rating.js'
 import { MOODS } from '@/constants/mood.js'
 
@@ -110,7 +112,7 @@ const MOOD_LABEL_MAP = MOODS.reduce((map, m) => {
 
 export default {
 	components: { Icon, StarRating },
-	mixins: [themeMixin],
+	mixins: [themeMixin, statusbarMixin],
 	setup() {
 		const journalStore = useJournalStore()
 		return { journalStore }
@@ -118,7 +120,6 @@ export default {
 	data() {
 		return {
 			journalId: '',
-			statusBarHeight: 0,
 			loaded: false,
 			ratingDimensions: RATING_DIMENSIONS
 		}
@@ -140,8 +141,7 @@ export default {
 		}
 	},
 	onLoad(options) {
-		const systemInfo = uni.getSystemInfoSync()
-		this.statusBarHeight = systemInfo.statusBarHeight || 20
+		// statusBarHeight 由 statusbarMixin 提供
 		if (options && options.id) {
 			this.journalId = options.id
 		}
@@ -152,12 +152,7 @@ export default {
 	},
 	methods: {
 		goBack() {
-			const pages = getCurrentPages()
-			if (pages.length > 1) {
-				uni.navigateBack()
-			} else {
-				uni.reLaunch({ url: '/pages/index/index' })
-			}
+			safeBack('/pages/index/index')
 		},
 		goToEdit() {
 			uni.navigateTo({

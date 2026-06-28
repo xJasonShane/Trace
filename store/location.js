@@ -5,6 +5,7 @@
 import { defineStore } from 'pinia'
 import storage from '../utils/storage.js'
 import dateUtil from '../utils/date.js'
+import { randomCoverColor } from '../constants/cover.js'
 
 export const useLocationStore = defineStore('location', {
 	state: () => ({
@@ -32,7 +33,7 @@ export const useLocationStore = defineStore('location', {
 				address: data.address || '',
 				latitude: data.latitude || 0,
 				longitude: data.longitude || 0,
-				coverColor: data.coverColor || ['warm', 'blue', 'lavender', 'green', 'gold'][Math.floor(Math.random() * 5)],
+				coverColor: data.coverColor || randomCoverColor(),
 				visitCount: data.visitCount || 1,
 				lastVisitDate: data.lastVisitDate || dateUtil.formatDate(new Date()),
 				journalCount: data.journalCount || 0,
@@ -72,7 +73,7 @@ export const useLocationStore = defineStore('location', {
 			const kw = keyword.toLowerCase().trim()
 			if (!kw) return []
 			return this.locations.filter(l =>
-				l.name.toLowerCase().includes(kw) ||
+				(l.name || '').toLowerCase().includes(kw) ||
 				(l.address && l.address.toLowerCase().includes(kw))
 			)
 		},

@@ -164,14 +164,17 @@ import StarRating from '@/components/StarRating.vue'
 import MoodSelect from '@/components/MoodSelect.vue'
 import PhotoUpload from '@/components/PhotoUpload.vue'
 import themeMixin from '@/mixins/theme.js'
+import statusbarMixin from '@/mixins/statusbar.js'
+import timersMixin from '@/mixins/timers.js'
 import { useJournalStore } from '@/store/journal.js'
 import { useLocationStore } from '@/store/location.js'
 import dateUtil from '@/utils/date.js'
+import { safeBack } from '@/utils/nav.js'
 import { RATING_DIMENSIONS, DEFAULT_RATINGS } from '@/constants/rating.js'
 
 export default {
 	components: { Icon, StarRating, MoodSelect, PhotoUpload },
-	mixins: [themeMixin],
+	mixins: [themeMixin, statusbarMixin, timersMixin],
 	setup() {
 		const journalStore = useJournalStore()
 		const locationStore = useLocationStore()
@@ -182,7 +185,6 @@ export default {
 			isEdit: false,
 			journalId: '',
 			locationId: '',
-			statusBarHeight: 0,
 			showSuggestions: false,
 			locationWarning: '',
 			validatedLocationId: '',
@@ -204,20 +206,9 @@ export default {
 			ratingDimensions: RATING_DIMENSIONS
 		}
 	},
-	created() {
-		// 非响应式定时器引用集合，页面销毁时统一清理
-		this._timers = []
-	},
-	onUnload() {
-		// 清理所有未完成的定时器，避免页面销毁后回调残留
-		if (this._timers) {
-			this._timers.forEach(id => clearTimeout(id))
-			this._timers = []
-		}
-	},
 	onLoad(options) {
-		const systemInfo = uni.getSystemInfoSync()
-		this.statusBarHeight = systemInfo.statusBarHeight || 20
+		// statusBarHeight 由 statusbarMixin 提供
+		// _timers 由 timersMixin 提供
 		// 默认日期为当天
 		this.form.date = dateUtil.formatDate(new Date())
 
@@ -536,13 +527,8 @@ export default {
 			}
 		},
 		goBack() {
-			const pages = getCurrentPages()
-			if (pages.length > 1) {
-				uni.navigateBack()
-			} else {
-				uni.reLaunch({ url: '/pages/index/index' })
-			}
-		}
+			safeBack('/pages/index/index')
+		},
 	}
 }
 </script>

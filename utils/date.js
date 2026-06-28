@@ -3,51 +3,88 @@
  */
 
 /**
- * 格式化日期为 YYYY-MM-DD
+ * 校验日期是否有效
+ * @param {Date} d
+ * @returns {boolean}
+ */
+function isValid(d) {
+	return d instanceof Date && !isNaN(d.getTime())
+}
+
+/**
+ * 将任意值转换为有效 Date，无效则返回 null
  * @param {Date|string|number} date
+ * @returns {Date|null}
+ */
+function toDate(date) {
+	const d = date instanceof Date ? date : new Date(date)
+	return isValid(d) ? d : null
+}
+
+/**
+ * 内部：补零到两位
+ * @param {number} n
  * @returns {string}
  */
+function pad2(n) {
+	return String(n).padStart(2, '0')
+}
+
+/**
+ * 内部：抽取日期各部分
+ * @param {Date|string|number} date
+ * @returns {{y:number,m:string,day:string,h:string,min:string}|null}
+ */
+function _parts(date) {
+	const d = toDate(date)
+	if (!d) return null
+	return {
+		y: d.getFullYear(),
+		m: pad2(d.getMonth() + 1),
+		day: pad2(d.getDate()),
+		h: pad2(d.getHours()),
+		min: pad2(d.getMinutes())
+	}
+}
+
+/**
+ * 格式化日期为 YYYY-MM-DD
+ * @param {Date|string|number} date
+ * @returns {string} 无效日期返回 ''
+ */
 function formatDate(date) {
-	const d = new Date(date)
-	const y = d.getFullYear()
-	const m = String(d.getMonth() + 1).padStart(2, '0')
-	const day = String(d.getDate()).padStart(2, '0')
-	return `${y}-${m}-${day}`
+	const p = _parts(date)
+	return p ? `${p.y}-${p.m}-${p.day}` : ''
 }
 
 /**
  * 格式化日期为 YYYY.MM.DD
  * @param {Date|string|number} date
- * @returns {string}
+ * @returns {string} 无效日期返回 ''
  */
 function formatDateDot(date) {
-	const d = new Date(date)
-	const y = d.getFullYear()
-	const m = String(d.getMonth() + 1).padStart(2, '0')
-	const day = String(d.getDate()).padStart(2, '0')
-	return `${y}.${m}.${day}`
+	const p = _parts(date)
+	return p ? `${p.y}.${p.m}.${p.day}` : ''
 }
 
 /**
  * 格式化日期时间
  * @param {Date|string|number} date
- * @returns {string} YYYY-MM-DD HH:mm
+ * @returns {string} YYYY-MM-DD HH:mm，无效日期返回 ''
  */
 function formatDateTime(date) {
-	const d = new Date(date)
-	const dateStr = formatDate(d)
-	const h = String(d.getHours()).padStart(2, '0')
-	const min = String(d.getMinutes()).padStart(2, '0')
-	return `${dateStr} ${h}:${min}`
+	const p = _parts(date)
+	return p ? `${p.y}-${p.m}-${p.day} ${p.h}:${p.min}` : ''
 }
 
 /**
  * 获取相对时间描述
  * @param {Date|string|number} date
- * @returns {string} 如 "2小时前"、"昨天"、"3天前"
+ * @returns {string} 如 "2小时前"、"昨天"、"3天前"，无效日期返回 ''
  */
 function formatRelative(date) {
-	const d = new Date(date)
+	const d = toDate(date)
+	if (!d) return ''
 	const now = new Date()
 	const diff = now - d
 	const minutes = Math.floor(diff / 60000)
@@ -66,10 +103,11 @@ function formatRelative(date) {
 /**
  * 获取日期分组标签
  * @param {Date|string|number} date
- * @returns {string} "今天"、"昨天"、"上周"、"更早"
+ * @returns {string} "今天"、"昨天"、"上周"、"更早"，无效日期返回 ''
  */
 function getDateGroup(date) {
-	const d = new Date(date)
+	const d = toDate(date)
+	if (!d) return ''
 	const now = new Date()
 	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 	const target = new Date(d.getFullYear(), d.getMonth(), d.getDate())
@@ -88,5 +126,7 @@ export default {
 	formatDateDot,
 	formatDateTime,
 	formatRelative,
-	getDateGroup
+	getDateGroup,
+	toDate,
+	isValid
 }

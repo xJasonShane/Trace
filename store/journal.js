@@ -5,6 +5,7 @@
 import { defineStore } from 'pinia'
 import storage from '../utils/storage.js'
 import dateUtil from '../utils/date.js'
+import { DEFAULT_RATINGS, calcOverallRating } from '../constants/rating.js'
 
 export const useJournalStore = defineStore('journal', {
 	state: () => ({
@@ -29,14 +30,16 @@ export const useJournalStore = defineStore('journal', {
 		},
 
 		// 心情分布
+		// 分母为有 mood 的手账数，避免无 mood 的手账导致百分比之和 < 100%
 		moodDistribution() {
 			const dist = {}
+			let total = 0
 			this.journals.forEach(j => {
 				if (j.mood) {
 					dist[j.mood] = (dist[j.mood] || 0) + 1
+					total++
 				}
 			})
-			const total = this.journals.length
 			const result = []
 			for (const [mood, count] of Object.entries(dist)) {
 				result.push({
@@ -49,35 +52,51 @@ export const useJournalStore = defineStore('journal', {
 		},
 
 		// 月度趋势（最近12个月）
+		// 优化：单次遍历通过 'YYYY-MM' key 计数，避免 O(12×n) 嵌套循环
 		monthlyTrend() {
 			const now = new Date()
+			const buckets = new Map()
+			for (let i = 0; i < 12; i++) {
+				const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+				buckets.set(`${d.getFullYear()}-${d.getMonth()}`, 0)
+			}
+			this.journals.forEach(j => {
+				const jd = new Date(j.createdAt)
+				if (isNaN(jd.getTime())) return
+				const key = `${jd.getFullYear()}-${jd.getMonth()}`
+				if (buckets.has(key)) {
+					buckets.set(key, buckets.get(key) + 1)
+				}
+			})
 			const trend = []
 			for (let i = 11; i >= 0; i--) {
 				const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-				const month = d.getMonth()
-				const year = d.getFullYear()
-				const count = this.journals.filter(j => {
-					const jd = new Date(j.createdAt)
-					return jd.getFullYear() === year && jd.getMonth() === month
-				}).length
-				trend.push({ month: month + 1, count })
+				trend.push({ month: d.getMonth() + 1, count: buckets.get(`${d.getFullYear()}-${d.getMonth()}`) })
 			}
 			return trend
 		},
 
 		// 连续记录天数
+		// 优化：直接用 Date 对象处理，避免字符串↔Date 反复转换
 		consecutiveDays() {
 			if (this.journals.length === 0) return 0
-			const dates = [...new Set(this.journals.map(j => dateUtil.formatDate(j.createdAt)))].sort().reverse()
+			// 用时间戳去重并排序（取每个日期的 0 点时间戳作为 key）
+			const daySet = new Set()
+			this.journals.forEach(j => {
+				const d = new Date(j.createdAt)
+				if (isNaN(d.getTime())) return
+				const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+				daySet.add(dayStart)
+			})
+			const timestamps = Array.from(daySet).sort((a, b) => b - a) // 降序
+			if (timestamps.length === 0) return 0
 			let max = 1
 			let current = 1
-			for (let i = 1; i < dates.length; i++) {
-				const prev = new Date(dates[i - 1])
-				const curr = new Date(dates[i])
-				const diff = Math.floor((prev - curr) / 86400000)
+			for (let i = 1; i < timestamps.length; i++) {
+				const diff = Math.round((timestamps[i - 1] - timestamps[i]) / 86400000)
 				if (diff === 1) {
 					current++
-					max = Math.max(max, current)
+					if (current > max) max = current
 				} else {
 					current = 1
 				}
@@ -112,13 +131,8 @@ export const useJournalStore = defineStore('journal', {
 				content: data.content || '',
 				photos: data.photos || [],
 				mood: data.mood || '😊',
-				ratings: data.ratings || {
-					environment: 5,
-					scenery: 5,
-					transport: 5,
-					experience: 5
-				},
-				overallRating: data.ratings ? calcOverall(data.ratings) : 5,
+				ratings: data.ratings || { ...DEFAULT_RATINGS },
+				overallRating: data.ratings ? calcOverallRating(data.ratings) : 5,
 				tags: data.tags || [],
 				createdAt: data.createdAt || now,
 				updatedAt: now
@@ -138,7 +152,7 @@ export const useJournalStore = defineStore('journal', {
 				updatedAt: dateUtil.formatDateTime(new Date())
 			}
 			if (data.ratings) {
-				updated.overallRating = calcOverall(data.ratings)
+				updated.overallRating = calcOverallRating(data.ratings)
 			}
 			this.journals[idx] = updated
 			this.persist()
@@ -169,19 +183,11 @@ export const useJournalStore = defineStore('journal', {
 			const kw = keyword.toLowerCase().trim()
 			if (!kw) return []
 			return this.sortedJournals.filter(j =>
-				j.title.toLowerCase().includes(kw) ||
-				j.content.toLowerCase().includes(kw) ||
-				j.locationName.toLowerCase().includes(kw) ||
+				(j.title || '').toLowerCase().includes(kw) ||
+				(j.content || '').toLowerCase().includes(kw) ||
+				(j.locationName || '').toLowerCase().includes(kw) ||
 				(j.tags && j.tags.some(t => t.toLowerCase().includes(kw)))
 			)
 		}
 	}
 })
-
-/**
- * 计算综合评分
- */
-function calcOverall(ratings) {
-	const vals = Object.values(ratings)
-	return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10
-}

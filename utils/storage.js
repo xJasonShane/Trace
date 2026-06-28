@@ -20,7 +20,9 @@ const KEYS = {
 function get(key, defaultValue = null) {
 	try {
 		const value = uni.getStorageSync(key)
-		return value === '' ? defaultValue : value
+		// uni.getStorageSync 在 key 不存在时返回空字符串 ''，此处判定为无数据
+		// 注：本项目存储的都是对象/数组，不会存储原始空字符串，因此该判断安全
+		return value === '' || value === null || value === undefined ? defaultValue : value
 	} catch (e) {
 		console.error('读取存储失败:', key, e)
 		return defaultValue
@@ -46,7 +48,7 @@ function set(key, value) {
  * @returns {string} 唯一ID
  */
 function generateId(prefix = 'id') {
-	return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+	return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
 }
 
 /**

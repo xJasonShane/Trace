@@ -53,8 +53,11 @@
  * 图片裁剪组件
  * 支持拖拽调整位置、双指/滑块缩放，确认后通过 canvas 输出正方形裁剪图
  */
+import timersMixin from '@/mixins/timers.js'
+
 export default {
 	name: 'ImageCropper',
+	mixins: [timersMixin],
 	props: {
 		visible: {
 			type: Boolean,
@@ -87,16 +90,6 @@ export default {
 			scaleStart: 1
 		}
 	},
-	created() {
-		this._timers = []
-	},
-	beforeUnmount() {
-		// 组件销毁时清理定时器
-		if (this._timers) {
-			this._timers.forEach(id => clearTimeout(id))
-			this._timers = []
-		}
-	},
 	computed: {
 		imageStyle() {
 			return {
@@ -110,6 +103,14 @@ export default {
 	watch: {
 		visible(val) {
 			if (val && this.imageSrc) {
+				this.$nextTick(() => {
+					this.initImage()
+				})
+			}
+		},
+		// 当弹窗已显示但图片源变化时，重新初始化图片
+		imageSrc(val) {
+			if (val && this.visible) {
 				this.$nextTick(() => {
 					this.initImage()
 				})

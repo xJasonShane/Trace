@@ -8,6 +8,9 @@
 		},
 		onHide: function() {
 			console.log('App Hide')
+		},
+		onError: function(err) {
+			console.error('全局错误:', err)
 		}
 	}
 </script>
@@ -41,6 +44,12 @@ view, text, image, scroll-view, input, textarea, button {
 /* ═══════════════════════════════════════════════════════════════
    主题 CSS 变量
    在各页面根 view (.page) 上绑定 :class="themeClass" 切换
+
+   命名说明：
+   - --primary  主色（橙红 #E09080），对应 uni.scss 的 $accent
+   - --accent   辅色（蓝 #7FA3C8），对应 uni.scss 的 $accent-secondary
+   注意：scss 的 $accent 与 CSS 的 --accent 含义不同（一个是主色、一个是辅色），
+   这是历史命名遗留，使用时请以颜色值为准。
    ═══════════════════════════════════════════════════════════════ */
 
 /* 白天模式（默认） */
@@ -49,8 +58,8 @@ view, text, image, scroll-view, input, textarea, button {
 	--fg: #2D2A26;
 	--surface: #FFFFFF;
 	--surface-alt: #F5F2EE;
-	--border: #EDEAE5;
-	--border-light: #E0DCD7;
+	--border: #E0DCD7;
+	--border-light: #EDEAE5;
 	--primary: #E09080;
 	--accent: #7FA3C8;
 	--star-active: #D9A54A;

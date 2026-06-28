@@ -18,6 +18,14 @@ export default {
 		// 三级文字颜色（浅灰）
 		themeTertiaryColor() {
 			return this.themeClass === 'theme-dark' ? '#6E6A65' : '#A5A09A'
+		},
+		// 二级文字颜色（中灰）
+		themeSecondaryColor() {
+			return this.themeClass === 'theme-dark' ? '#A5A09A' : '#7A756F'
+		},
+		// placeholder 内联样式（用于 input/textarea 的 :placeholder-style）
+		themePlaceholderStyle() {
+			return this.themeClass === 'theme-dark' ? 'color: #6E6A65;' : 'color: #A5A09A;'
 		}
 	}
 }

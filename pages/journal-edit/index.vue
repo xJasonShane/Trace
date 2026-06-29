@@ -171,6 +171,13 @@ import { useLocationStore } from '@/store/location.js'
 import dateUtil from '@/utils/date.js'
 import { safeBack } from '@/utils/nav.js'
 import { RATING_DIMENSIONS, DEFAULT_RATINGS } from '@/constants/rating.js'
+import {
+	combineDateWithCurrentTime,
+	buildJournalData,
+	shouldUpdateCoordinates,
+	buildLocationUpdatePayload,
+	calcLocationPhotoCount
+} from './save-helpers.js'
 
 export default {
 	components: { Icon, StarRating, MoodSelect, PhotoUpload },
@@ -449,83 +456,102 @@ export default {
 			return true
 		},
 		save() {
-			// 防止重复提交
-			if (this.saving) return
-			if (!this.validate()) return
+		// 防止重复提交
+		if (this.saving) return
+		if (!this.validate()) return
 
-			this.saving = true
+		this.saving = true
 
-			// 确定关联地点：使用 findOrCreate 自动创建新地点
-			let locationId = this.validatedLocationId || this.locationId
-			const locName = this.form.locationName.trim()
+		try {
+			const locationId = this.resolveLocationId()
+			const data = this.prepareJournalData(locationId)
+			const saved = this.persistJournal(data)
+			this.handleSaveResult(saved, locationId)
+		} catch (error) {
+			console.error('保存手账失败:', error)
+			this.handleSaveError()
+		}
+	},
+	/**
+	 * 解析并处理地点ID：新地点自动创建，已有地点坐标变化时更新
+	 * @returns {string} 地点ID
+	 */
+	resolveLocationId() {
+		let locationId = this.validatedLocationId || this.locationId
+		const locName = this.form.locationName.trim()
 
-			if (locName && !locationId) {
-				// 新地点 — 自动创建
-				const loc = this.locationStore.findOrCreate({
-					name: locName,
-					address: this.form.locationAddress || '',
-					latitude: this.form.locationLat || 0,
-					longitude: this.form.locationLng || 0
-				})
-				locationId = loc.id
-			} else if (locName && locationId) {
-				// 已有地点 — 如果坐标有变化，更新坐标
-				const loc = this.locationStore.getLocation(locationId)
-				if (loc && this.form.locationLat && this.form.locationLng) {
-					if (loc.latitude !== this.form.locationLat || loc.longitude !== this.form.locationLng) {
-						this.locationStore.updateLocation(locationId, {
-							latitude: this.form.locationLat,
-							longitude: this.form.locationLng,
-							address: this.form.locationAddress || loc.address
-						})
-					}
-				}
+		if (locName && !locationId) {
+			// 新地点 — 自动创建
+			const loc = this.locationStore.findOrCreate({
+				name: locName,
+				address: this.form.locationAddress || '',
+				latitude: this.form.locationLat || 0,
+				longitude: this.form.locationLng || 0
+			})
+			locationId = loc.id
+		} else if (locName && locationId) {
+			// 已有地点 — 坐标变化时更新
+			const loc = this.locationStore.getLocation(locationId)
+			if (shouldUpdateCoordinates(loc, this.form)) {
+				this.locationStore.updateLocation(locationId, buildLocationUpdatePayload(this.form, loc))
 			}
+		}
 
-			// 将用户选择的日期与当前时间组合为完整时间戳
-			const now = new Date()
-			const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0')
-			const createdAt = this.form.date + ' ' + timeStr
-
-			const data = {
-				title: this.form.title.trim(),
-				locationId,
-				locationName: this.form.locationName.trim(),
-				content: this.form.content.trim(),
-				photos: this.form.photos,
-				mood: this.form.mood,
-				createdAt,
-				ratings: { ...this.form.ratings },
-				tags: [...this.form.tags]
-			}
-
-			let saved
-			if (this.isEdit) {
-				saved = this.journalStore.updateJournal(this.journalId, data)
-			} else {
-				saved = this.journalStore.addJournal(data)
-			}
-
-			if (saved) {
-				// 更新地点统计（手账数、照片数、最近到访日期）
-				if (locationId) {
-					const journals = this.journalStore.getJournalsByLocation(locationId)
-					const photoCount = journals.reduce(
-						(sum, j) => sum + (j.photos ? j.photos.length : 0),
-						0
-					)
-					this.locationStore.updateStats(locationId, journals.length, photoCount)
-				}
-
-				uni.showToast({ title: '保存成功', icon: 'success' })
-				this._timers.push(setTimeout(() => {
-					uni.navigateBack()
-				}, 1200))
-			} else {
-				this.saving = false
-				uni.showToast({ title: '保存失败', icon: 'none' })
-			}
-		},
+		return locationId
+	},
+	/**
+	 * 准备手账保存数据
+	 * @param {string} locationId - 地点ID
+	 * @returns {Object} 手账数据对象
+	 */
+	prepareJournalData(locationId) {
+		const createdAt = combineDateWithCurrentTime(this.form.date, new Date())
+		return buildJournalData(this.form, locationId, createdAt)
+	},
+	/**
+	 * 持久化手账数据
+	 * @param {Object} data - 手账数据
+	 * @returns {Object|null} 保存结果
+	 */
+	persistJournal(data) {
+		if (this.isEdit) {
+			return this.journalStore.updateJournal(this.journalId, data)
+		}
+		return this.journalStore.addJournal(data)
+	},
+	/**
+	 * 更新地点统计数据
+	 * @param {string} locationId - 地点ID
+	 */
+	updateLocationStats(locationId) {
+		if (!locationId) return
+		const journals = this.journalStore.getJournalsByLocation(locationId)
+		const photoCount = calcLocationPhotoCount(journals)
+		this.locationStore.updateStats(locationId, journals.length, photoCount)
+	},
+	/**
+	 * 处理保存结果
+	 * @param {Object|null} saved - 保存结果
+	 * @param {string} locationId - 地点ID
+	 */
+	handleSaveResult(saved, locationId) {
+		if (!saved) {
+			this.handleSaveError()
+			return
+		}
+		this.updateLocationStats(locationId)
+		uni.showToast({ title: '保存成功', icon: 'success' })
+		this._timers.push(setTimeout(() => {
+			uni.navigateBack()
+		}, 1200))
+	},
+	/**
+	 * 处理保存失败
+	 */
+	handleSaveError() {
+		this.saving = false
+		uni.showToast({ title: '保存失败', icon: 'none' })
+	},
 		goBack() {
 			safeBack('/pages/index/index')
 		},

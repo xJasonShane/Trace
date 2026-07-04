@@ -52,12 +52,12 @@
 					>
 						<view class="bar-wrap">
 							<view
-							class="bar"
-							:class="{ active: idx === monthlyTrend.length - 1 }"
-							:style="{ height: item.height + 'rpx' }"
-						></view>
+								class="bar"
+								:class="{ active: idx === monthlyTrend.length - 1 }"
+								:style="{ height: item.height + 'rpx' }"
+							></view>
 						</view>
-						<text class="bar-label">{{ item.month }}月</text>
+						<text class="bar-label">{{ item.month }}</text>
 					</view>
 				</view>
 			</view>
@@ -124,13 +124,18 @@ export default {
 		},
 		monthlyTrend() {
 			// 在 computed 中预先计算 barHeight，避免在 v-for 中调用方法
+			// 跨年时月份数字相同（如 1月），通过 year 字段补充显示 "yy/MM" 区分
 			const trend = this.journalStore.monthlyTrend
 			const counts = trend.map(t => t.count)
 			const maxCount = Math.max(...counts, 1)
 			const minH = 20
 			const maxH = 180
+			const currentYear = new Date().getFullYear()
 			return trend.map(item => ({
-				month: item.month,
+				// 当年显示 "M月"，跨年显示 "yy/M月"（如 24/12月），便于区分
+				month: item.year === currentYear
+					? (item.month + '月')
+					: (String(item.year).slice(-2) + '/' + item.month + '月'),
 				count: item.count,
 				height: item.count === 0 ? minH : Math.max(minH, Math.round((item.count / maxCount) * maxH))
 			}))
@@ -357,9 +362,5 @@ export default {
 	color: var(--text-secondary);
 	width: 72rpx;
 	text-align: right;
-}
-
-.bottom-pad {
-	height: 140rpx;
 }
 </style>

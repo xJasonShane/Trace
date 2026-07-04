@@ -13,6 +13,8 @@
 </template>
 
 <script>
+import { MOODS } from '@/constants/mood.js'
+
 export default {
 	name: 'MoodSelect',
 	props: {
@@ -24,13 +26,8 @@ export default {
 	emits: ['update:modelValue', 'change'],
 	data() {
 		return {
-			moods: [
-				{ emoji: '😊', label: '愉快' },
-				{ emoji: '🌸', label: '美好' },
-				{ emoji: '☀️', label: '阳光' },
-				{ emoji: '🌙', label: '宁静' },
-				{ emoji: '🍂', label: '怀旧' }
-			]
+			// 心情列表统一使用常量，避免与统计页/详情页标签不一致
+			moods: MOODS
 		}
 	},
 	methods: {
@@ -61,10 +58,10 @@ export default {
 }
 
 .mood-dot.active {
-	border-color: #E09080;
-	background: rgba(224, 144, 128, 0.15);
+	border-color: var(--primary);
+	background: var(--primary-soft);
 	transform: scale(1.1);
-	box-shadow: 0 0 0 6rpx rgba(224, 144, 128, 0.15);
+	box-shadow: 0 0 0 6rpx var(--primary-soft);
 }
 
 .mood-emoji {

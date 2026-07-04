@@ -5,7 +5,9 @@
 import { defineStore } from 'pinia'
 import storage from '../utils/storage.js'
 import dateUtil from '../utils/date.js'
+import imageUtil from '../utils/image.js'
 import { DEFAULT_RATINGS, calcOverallRating } from '../constants/rating.js'
+import { useLocationStore } from './location.js'
 
 export const useJournalStore = defineStore('journal', {
 	state: () => ({
@@ -53,6 +55,7 @@ export const useJournalStore = defineStore('journal', {
 
 		// 月度趋势（最近12个月）
 		// 优化：单次遍历通过 'YYYY-MM' key 计数，避免 O(12×n) 嵌套循环
+		// 跨年场景下同月份数字（如 1月）需通过 year 字段区分，避免 UI 显示混淆
 		monthlyTrend() {
 			const now = new Date()
 			const buckets = new Map()
@@ -71,7 +74,11 @@ export const useJournalStore = defineStore('journal', {
 			const trend = []
 			for (let i = 11; i >= 0; i--) {
 				const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-				trend.push({ month: d.getMonth() + 1, count: buckets.get(`${d.getFullYear()}-${d.getMonth()}`) })
+				trend.push({
+					month: d.getMonth() + 1,
+					year: d.getFullYear(),
+					count: buckets.get(`${d.getFullYear()}-${d.getMonth()}`)
+				})
 			}
 			return trend
 		},
@@ -111,13 +118,87 @@ export const useJournalStore = defineStore('journal', {
 				const d = new Date(j.createdAt)
 				return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
 			}).length
+		},
+
+		// 按条件读取的纯查询方法以 curried getter 形式声明，
+		// 调用语法 store.fn(arg) 与 action 一致，但语义上表明这是只读操作且不触发 mutation
+		// 获取手账详情
+		getJournal: (state) => (id) => state.journals.find(j => j.id === id),
+
+		// 按地点获取手账（依赖 sortedJournals，使用 this 访问其他 getter）
+		// 注：curried getter 在需要访问其他 getter 时必须用 method 形式（this 指向 store 实例）
+		getJournalsByLocation() {
+			return (locationId) => this.sortedJournals.filter(j => j.locationId === locationId)
+		},
+
+		// 按地点获取照片总数（依赖 getJournalsByLocation，避免页面层重复 reduce 计算）
+		photosByLocation() {
+			return (locationId) => this.getJournalsByLocation(locationId).reduce(
+				(sum, j) => sum + (j.photos ? j.photos.length : 0),
+				0
+			)
+		},
+
+		// 搜索手账
+		search() {
+			return (keyword) => {
+				const kw = keyword.toLowerCase().trim()
+				if (!kw) return []
+				return this.sortedJournals.filter(j =>
+					(j.title || '').toLowerCase().includes(kw) ||
+					(j.content || '').toLowerCase().includes(kw) ||
+					(j.locationName || '').toLowerCase().includes(kw) ||
+					(j.tags && j.tags.some(t => t.toLowerCase().includes(kw)))
+				)
+			}
 		}
 	},
 
 	actions: {
 		// 保存到本地存储
 		persist() {
-			storage.set(storage.KEYS.JOURNALS, this.journals)
+			return storage.set(storage.KEYS.JOURNALS, this.journals)
+		},
+
+		/**
+		 * 同步指定地点的统计数据到 location store
+		 * 跨 store 同步逻辑收敛至此，页面层只需调用一次
+		 * 计算该地点的手账总数与照片总数，并调用 locationStore.updateStats
+		 * @param {string} locationId - 地点ID
+		 * @returns {boolean} locationStore.updateStats 的返回值；locationId 为空时返回 false
+		 */
+		syncLocationStats(locationId) {
+			if (!locationId) return false
+			const journals = this.getJournalsByLocation(locationId)
+			const photoCount = journals.reduce(
+				(sum, j) => sum + (j.photos ? j.photos.length : 0),
+				0
+			)
+			const locationStore = useLocationStore()
+			return locationStore.updateStats(locationId, journals.length, photoCount)
+		},
+
+		/**
+		 * 解除地点与所有关联手账的关联关系
+		 * 用于地点删除时，避免手账残留指向已删除地点的 locationId/locationName
+		 * 批量更新所有匹配手账的 locationId/locationName 为空，并持久化
+		 * @param {string} locationId - 被删除的地点ID
+		 * @returns {number} 解除关联的手账数量
+		 */
+		unlinkLocation(locationId) {
+			if (!locationId) return 0
+			let count = 0
+			this.journals.forEach(j => {
+				if (j.locationId === locationId) {
+					j.locationId = ''
+					j.locationName = j.locationName || '已删除地点'
+					count++
+				}
+			})
+			if (count > 0) {
+				this.persist()
+			}
+			return count
 		},
 
 		// 新增手账
@@ -138,7 +219,11 @@ export const useJournalStore = defineStore('journal', {
 				updatedAt: now
 			}
 			this.journals.unshift(journal)
-			this.persist()
+			if (!this.persist()) {
+				// 持久化失败：回滚内存状态
+				this.journals.shift()
+				return null
+			}
 			return journal
 		},
 
@@ -146,8 +231,9 @@ export const useJournalStore = defineStore('journal', {
 		updateJournal(id, data) {
 			const idx = this.journals.findIndex(j => j.id === id)
 			if (idx === -1) return null
+			const original = this.journals[idx]
 			const updated = {
-				...this.journals[idx],
+				...original,
 				...data,
 				updatedAt: dateUtil.formatDateTime(new Date())
 			}
@@ -155,7 +241,18 @@ export const useJournalStore = defineStore('journal', {
 				updated.overallRating = calcOverallRating(data.ratings)
 			}
 			this.journals[idx] = updated
-			this.persist()
+			if (!this.persist()) {
+				// 持久化失败：回滚内存状态
+				this.journals[idx] = original
+				return null
+			}
+			// 照片列表变化时，清理被移除的旧照片文件
+			if (data.photos && Array.isArray(original.photos)) {
+				const removed = original.photos.filter(p => !updated.photos.includes(p))
+				if (removed.length > 0) {
+					this._cleanupJournalPhotos({ photos: removed })
+				}
+			}
 			return updated
 		},
 
@@ -163,31 +260,71 @@ export const useJournalStore = defineStore('journal', {
 		deleteJournal(id) {
 			const idx = this.journals.findIndex(j => j.id === id)
 			if (idx === -1) return false
-			this.journals.splice(idx, 1)
-			this.persist()
+			const removed = this.journals.splice(idx, 1)[0]
+			if (!this.persist()) {
+				// 持久化失败：回滚内存状态
+				this.journals.splice(idx, 0, removed)
+				return false
+			}
+			// 持久化成功后异步清理关联照片文件，避免存储泄漏（fire-and-forget）
+			this._cleanupJournalPhotos(removed)
 			return true
 		},
 
-		// 获取手账详情
-		getJournal(id) {
-			return this.journals.find(j => j.id === id)
+		/**
+		 * 清理手账关联的照片文件（内部方法）
+		 * 异步执行，不阻塞删除流程；失败时仅打印日志，不影响业务
+		 * 跨端兼容：
+		 *   - App 端：永久路径形如 _doc/xxx、_documents/xxx、/store/xxx、/unpackage/xxx
+		 *   - 微信小程序：永久路径形如 wxfile://store_xxx（区别于临时路径 wxfile://tmp_xxx）
+		 *   - H5 端：blob:/data: 路径无需也无法清理，自动跳过
+		 * @param {Object} journal 已删除的手账对象
+		 */
+		_cleanupJournalPhotos(journal) {
+			if (!journal || !Array.isArray(journal.photos) || journal.photos.length === 0) return
+			// 仅清理永久保存路径（uni.saveFile 返回的路径）
+			// 临时路径（如 http://tmp/xxx.jpg、wxfile://tmp_xxx、blob:）无需清理
+			const permanentPaths = journal.photos.filter(p => {
+				if (typeof p !== 'string') return false
+				// App 端永久路径前缀
+				if (p.startsWith('_doc/') || p.startsWith('_documents/') || p.startsWith('/store') || p.includes('/unpackage/')) {
+					return true
+				}
+				// 微信小程序永久路径前缀（wxfile://store_xxx），区别于临时路径 wxfile://tmp_xxx
+				if (p.startsWith('wxfile://store_') || p.startsWith('http://store/') || p.startsWith('https://store/')) {
+					return true
+				}
+				return false
+			})
+			permanentPaths.forEach(filePath => {
+				imageUtil.removeFile(filePath).then(ok => {
+					if (!ok) console.warn('清理照片文件失败:', filePath)
+				}).catch(err => {
+					console.warn('清理照片文件异常:', filePath, err)
+				})
+			})
 		},
 
-		// 按地点获取手账
-		getJournalsByLocation(locationId) {
-			return this.sortedJournals.filter(j => j.locationId === locationId)
+		// 获取手账详情、按地点获取手账、搜索 已迁移为 getter（curried 形式）
+
+		// 保存草稿（用于未保存退出时恢复）
+		saveDraft(draft) {
+			if (!draft) return
+			const payload = {
+				form: draft,
+				savedAt: dateUtil.formatDateTime(new Date())
+			}
+			storage.set(storage.KEYS.JOURNAL_DRAFT, payload)
 		},
 
-		// 搜索手账
-		search(keyword) {
-			const kw = keyword.toLowerCase().trim()
-			if (!kw) return []
-			return this.sortedJournals.filter(j =>
-				(j.title || '').toLowerCase().includes(kw) ||
-				(j.content || '').toLowerCase().includes(kw) ||
-				(j.locationName || '').toLowerCase().includes(kw) ||
-				(j.tags && j.tags.some(t => t.toLowerCase().includes(kw)))
-			)
+		// 读取草稿
+		getDraft() {
+			return storage.get(storage.KEYS.JOURNAL_DRAFT, null)
+		},
+
+		// 清除草稿
+		clearDraft() {
+			storage.set(storage.KEYS.JOURNAL_DRAFT, null)
 		}
 	}
 })

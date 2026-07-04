@@ -162,7 +162,16 @@ export default {
 			if (this.activeFilter === 'journal') return this.journalResults
 			if (this.activeFilter === 'tag') return this.tagResults
 			// "全部"筛选：合并手账、地点、标签结果
-			return [...this.journalResults, ...this.locationResults, ...this.tagResults]
+			// 同一手账可能同时命中 journalResults（标题/内容）与 tagResults（标签），需按 type+id 去重
+			const seen = new Set()
+			const merged = []
+			for (const item of [...this.journalResults, ...this.locationResults, ...this.tagResults]) {
+				const key = item.type + '-' + item.id
+				if (seen.has(key)) continue
+				seen.add(key)
+				merged.push(item)
+			}
+			return merged
 		},
 		// 预计算高亮分段，避免模板内每次渲染都调用方法
 		highlightedResults() {
@@ -175,7 +184,6 @@ export default {
 		}
 	},
 	onLoad(options) {
-		// statusBarHeight 由 statusbarMixin 提供
 		// 支持从"我的页面"跳转时携带筛选条件
 		if (options && options.filter && this.filterTabs.some(t => t.key === options.filter)) {
 			this.activeFilter = options.filter

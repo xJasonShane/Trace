@@ -124,7 +124,9 @@ export default {
 	data() {
 		return {
 			backing: false,
-			backupTick: 0
+			backupTick: 0,
+			// 缓存备份信息，避免 computed 中同步读取存储
+			backupInfo: null
 		}
 	},
 	// _timers 由 timersMixin 提供
@@ -145,17 +147,28 @@ export default {
 			return this.journalStore.totalPhotos
 		},
 		backupMeta() {
-			// 引用 backupTick 建立响应式依赖，确保备份/恢复后重新计算
+			// 引用 backupTick 建立响应式依赖，备份/恢复后触发刷新
 			void this.backupTick
-			const info = storage.getBackupInfo()
-			if (!info.exists) return '未备份'
-			return dateUtil.formatDateDot(info.timestamp)
+			const info = this.backupInfo
+			if (!info || !info.exists) return '未备份'
+			const date = dateUtil.formatDateDot(info.timestamp)
+			// 备份损坏时在日期后追加警告标记，提示用户重新备份
+			return info.valid ? date : `${date}（已损坏）`
 		}
 	},
 	onLoad() {
-		// statusBarHeight 由 statusbarMixin 提供
+		// 异步加载备份信息，避免阻塞首帧
+		this.refreshBackupInfo()
 	},
 	methods: {
+		// 异步加载备份信息到缓存
+		refreshBackupInfo() {
+			storage.getBackupInfoAsync().then(info => {
+				this.backupInfo = info
+			}).catch(err => {
+				console.warn('加载备份信息失败:', err)
+			})
+		},
 		toggleNotify() {
 			this.profileStore.saveSettings({ notifications: !this.settings.notifications })
 		},
@@ -206,6 +219,7 @@ export default {
 				if (result.success) {
 					this.profileStore.saveSettings({ backup: true })
 					this.backupTick++
+					this.refreshBackupInfo()
 					uni.showToast({ title: '备份成功', icon: 'success' })
 				} else {
 					uni.showToast({ title: result.message, icon: 'none' })
@@ -213,7 +227,7 @@ export default {
 			}, 300))
 		},
 		confirmRestore() {
-			const info = storage.getBackupInfo()
+			const info = this.backupInfo || storage.getBackupInfo()
 			const dateStr = info.exists ? dateUtil.formatDateDot(info.timestamp) : ''
 			uni.showModal({
 				title: '恢复备份',
@@ -234,6 +248,7 @@ export default {
 				uni.hideLoading()
 				if (result.success) {
 					this.backupTick++
+					this.refreshBackupInfo()
 					uni.showToast({ title: '恢复成功', icon: 'success' })
 					// 刷新页面数据
 					this._timers.push(setTimeout(() => {
@@ -406,7 +421,7 @@ export default {
 .toggle {
 	width: 88rpx;
 	height: 52rpx;
-	background: #E09080;
+	background: var(--primary);
 	border-radius: 26rpx;
 	position: relative;
 	transition: background 0.2s;
@@ -433,9 +448,5 @@ export default {
 .toggle.off::after {
 	right: auto;
 	left: 4rpx;
-}
-
-.bottom-pad {
-	height: 140rpx;
 }
 </style>

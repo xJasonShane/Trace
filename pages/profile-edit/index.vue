@@ -120,6 +120,8 @@ export default {
 				birthday: '',
 				avatar: ''
 			},
+			// 表单初始快照，用于 dirty 检测，避免无改动时触发存储写入
+			initialFormSnapshot: null,
 			saving: false,
 			showCropper: false,
 			cropImageSrc: '',
@@ -140,10 +142,22 @@ export default {
 		},
 		placeholderStyle() {
 			return this.themePlaceholderStyle
+		},
+		// 表单是否有改动（与初始快照对比）
+		isDirty() {
+			if (!this.initialFormSnapshot) return false
+			const f = this.form
+			const s = this.initialFormSnapshot
+			return (
+				f.nickname !== s.nickname ||
+				f.bio !== s.bio ||
+				f.city !== s.city ||
+				f.birthday !== s.birthday ||
+				f.avatar !== s.avatar
+			)
 		}
 	},
 	onLoad() {
-		// statusBarHeight 由 statusbarMixin 提供
 		const profileStore = useProfileStore()
 		const p = profileStore.profile || {}
 		this.form = {
@@ -153,8 +167,13 @@ export default {
 			birthday: p.birthday || '',
 			avatar: p.avatar || ''
 		}
+		this.snapshotForm()
 	},
 	methods: {
+		// 保存表单初始快照，用于 dirty 检测
+		snapshotForm() {
+			this.initialFormSnapshot = { ...this.form }
+		},
 		onBack() {
 			safeBack('/pages/profile/index')
 		},
@@ -195,6 +214,11 @@ export default {
 			if (this.saving) return
 			if (!this.form.nickname.trim()) {
 				uni.showToast({ title: '请输入昵称', icon: 'none' })
+				return
+			}
+			// 无改动直接返回，避免无谓的存储写入
+			if (!this.isDirty) {
+				uni.navigateBack()
 				return
 			}
 			this.saving = true

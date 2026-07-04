@@ -23,6 +23,7 @@
 import Icon from './Icon.vue'
 import themeMixin from '@/mixins/theme.js'
 import imageUtil from '../utils/image.js'
+import permissionUtil from '@/utils/permission.js'
 
 export default {
 	name: 'PhotoUpload',
@@ -46,19 +47,34 @@ export default {
 		}
 	},
 	methods: {
-		async addPhoto() {
-			try {
-				const remaining = this.maxCount - this.photos.length
-				if (remaining <= 0) return
-				const newPhotos = await imageUtil.pickAndSaveImages(remaining)
-				const updated = [...this.photos, ...newPhotos]
-				this.$emit('update:modelValue', updated)
-				this.$emit('change', updated)
-			} catch (e) {
-				if (e.errMsg && !e.errMsg.includes('cancel')) {
-					uni.showToast({ title: '选择图片失败', icon: 'none' })
+		addPhoto() {
+			const remaining = this.maxCount - this.photos.length
+			if (remaining <= 0) return
+			// 使用 permission util 包装 chooseImage，统一处理权限被拒引导
+			permissionUtil.chooseImageWithGuide(
+				{ count: remaining, sizeType: ['compressed'], sourceType: ['album', 'camera'] },
+				{
+					onSuccess: async (res) => {
+						try {
+							// 并行处理所有图片（压缩+保存）
+							const savedPaths = await imageUtil.processTempImages(res.tempFilePaths)
+							const updated = [...this.photos, ...savedPaths]
+							this.$emit('update:modelValue', updated)
+							this.$emit('change', updated)
+						} catch (e) {
+							console.error('处理图片失败:', e)
+							uni.showToast({ title: '处理图片失败', icon: 'none' })
+						}
+					},
+					onFail: (err) => {
+						console.warn('选择图片失败:', err)
+						// 权限被拒已由 permission util 引导，非权限错误显示通用提示
+						if (!permissionUtil.isPermissionDenied(err)) {
+							uni.showToast({ title: '选择图片失败', icon: 'none' })
+						}
+					}
 				}
-			}
+			)
 		},
 		previewPhoto(index) {
 			if (this.photos.length > 0) {

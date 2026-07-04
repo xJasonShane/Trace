@@ -1,23 +1,25 @@
 <template>
 	<view class="page" :class="themeClass">
 		<!-- Hero 区域 -->
-		<view class="hero">
-			<view class="status-bar-spacer" :style="{ height: statusBarHeight + 'px' }"></view>
-			<view class="hero-content">
-				<view class="hero-pattern"></view>
-				<view class="hero-icon">
-					<Icon name="mountain" :size="96" color="#FFFFFF" :strokeWidth="1.4" />
+		<PageHero
+			gradient="linear-gradient(135deg, #E0C5BB 0%, #D4B5AA 50%, #C8A599 100%)"
+			:contentHeight="320"
+			:iconOpacity="0.3"
+			:patternSpacing="36"
+			:patternOpacity="0.12"
+		>
+			<template #icon>
+				<Icon name="mountain" :size="96" color="#FFFFFF" :strokeWidth="1.4" />
+			</template>
+			<template #nav>
+				<view class="nav-btn" @tap="goBack">
+					<Icon name="back" :size="32" :color="themeFgColor" :strokeWidth="2" />
 				</view>
-				<view class="hero-nav">
-					<view class="nav-btn" @tap="goBack">
-						<Icon name="back" :size="32" :color="themeFgColor" :strokeWidth="2" />
-					</view>
-					<view class="nav-btn" @tap="showMore">
-						<Icon name="more" :size="32" :color="themeFgColor" :strokeWidth="2" />
-					</view>
+				<view class="nav-btn" @tap="showMore">
+					<Icon name="more" :size="32" :color="themeFgColor" :strokeWidth="2" />
 				</view>
-			</view>
-		</view>
+			</template>
+		</PageHero>
 
 		<!-- 地点信息 -->
 		<view v-if="location" class="info-section">
@@ -96,18 +98,18 @@
 <script>
 import Icon from '@/components/Icon.vue'
 import StarRating from '@/components/StarRating.vue'
+import PageHero from '@/components/PageHero.vue'
 import { useJournalStore } from '@/store/journal.js'
 import { useLocationStore } from '@/store/location.js'
 import dateUtil from '@/utils/date.js'
 import themeMixin from '@/mixins/theme.js'
-import statusbarMixin from '@/mixins/statusbar.js'
 import timersMixin from '@/mixins/timers.js'
 import { safeBack } from '@/utils/nav.js'
 import { getMoodColor } from '@/constants/mood.js'
 
 export default {
-	components: { Icon, StarRating },
-	mixins: [themeMixin, statusbarMixin, timersMixin],
+	components: { Icon, StarRating, PageHero },
+	mixins: [themeMixin, timersMixin],
 	setup() {
 		const journalStore = useJournalStore()
 		const locationStore = useLocationStore()
@@ -138,7 +140,8 @@ export default {
 			return this.journals.length
 		},
 		photoCount() {
-			return this.journals.reduce((sum, j) => sum + (j.photos ? j.photos.length : 0), 0)
+			// 复用 store 的 photosByLocation getter，避免页面层重复 reduce 计算
+			return this.journalStore.photosByLocation(this.locationId)
 		},
 		visitCount() {
 			return this.location ? (this.location.visitCount || 0) : 0
@@ -149,7 +152,6 @@ export default {
 		}
 	},
 	onLoad(options) {
-		// statusBarHeight 由 statusbarMixin 提供
 		// 重置状态，避免上一次的预设数据残留
 		this.locationId = ''
 		this.loaded = false
@@ -198,6 +200,8 @@ export default {
 				confirmColor: '#C8504A',
 				success: (res) => {
 					if (res.confirm) {
+						// 先解除关联手账的 locationId，再删除地点本身，避免手账残留指向已删除地点
+						this.journalStore.unlinkLocation(this.locationId)
 						this.locationStore.deleteLocation(this.locationId)
 						uni.showToast({ title: '已删除', icon: 'success' })
 						this._timers.push(setTimeout(() => this.goBack(), 1200))
@@ -221,60 +225,6 @@ export default {
 	min-height: 100vh;
 	background: var(--bg);
 	padding-bottom: 200rpx;
-}
-
-/* Hero 区域 */
-.hero {
-	background: linear-gradient(135deg, #E0C5BB 0%, #D4B5AA 50%, #C8A599 100%);
-}
-
-.hero-content {
-	height: 320rpx;
-	position: relative;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	overflow: hidden;
-}
-
-.hero-pattern {
-	position: absolute;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	background:
-		repeating-linear-gradient(0deg, transparent, transparent 36rpx, rgba(255, 255, 255, 0.12) 36rpx, rgba(255, 255, 255, 0.12) 38rpx),
-		repeating-linear-gradient(90deg, transparent, transparent 36rpx, rgba(255, 255, 255, 0.06) 36rpx, rgba(255, 255, 255, 0.06) 38rpx);
-	pointer-events: none;
-}
-
-.hero-icon {
-	opacity: 0.3;
-	position: relative;
-	z-index: 1;
-}
-
-.hero-nav {
-	position: absolute;
-	top: 24rpx;
-	left: 24rpx;
-	right: 24rpx;
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	z-index: 2;
-}
-
-.nav-btn {
-	width: 64rpx;
-	height: 64rpx;
-	border-radius: 50%;
-	background: rgba(255, 255, 255, 0.85);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
 }
 
 /* 地点信息 */
@@ -476,10 +426,10 @@ export default {
 	padding: 120rpx 24rpx;
 }
 
-/* FAB 按钮（覆盖全局 .fab 的 bottom 与 z-index） */
+/* FAB 按钮（覆盖全局 .fab 的 bottom 与 z-index，保留安全区适配） */
 .fab {
 	right: 32rpx;
-	bottom: 64rpx;
+	bottom: calc(64rpx + env(safe-area-inset-bottom));
 	z-index: 100;
 }
 </style>

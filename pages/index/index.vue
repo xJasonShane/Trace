@@ -98,6 +98,17 @@
 				</cover-view>
 			</cover-view>
 
+			<!-- 空状态引导：地点列表为空时展示，引导用户创建第一篇手账 -->
+			<cover-view
+				v-if="displayLocations.length === 0"
+				class="map-empty"
+				:style="coverBoxStyle"
+				@tap="goNewJournal"
+			>
+				<cover-view class="me-title" :style="coverNameStyle">还没有地点记录</cover-view>
+				<cover-view class="me-desc" :style="coverSubStyle">点击此处或地图任意位置，记录你的第一篇手账</cover-view>
+			</cover-view>
+
 		</view>
 
 		<!-- TabBar（非 fixed 模式，作为 flex 子元素避免被原生 map 覆盖） -->
@@ -112,15 +123,13 @@ import statusbarMixin from '@/mixins/statusbar.js'
 import { useLocationStore } from '@/store/location.js'
 import { useJournalStore } from '@/store/journal.js'
 import { MOOD_COLOR_HEX } from '@/constants/mood.js'
+import { ICON_PATHS } from '@/constants/icons.js'
 import dateUtil from '@/utils/date.js'
+import permissionUtil from '@/utils/permission.js'
 
 // cover-view 内部无法使用自定义组件，需内联 SVG 图标路径
-const COVER_ICONS = {
-	search: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
-	mountain: '<path d="M3 20l5.5-9 4 6 3-4.5 5.5 7.5z"/><circle cx="17" cy="7" r="2.5"/>',
-	locate: '<circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/>',
-	plus: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>'
-}
+// 复用 constants/icons.js 中的 ICON_PATHS，避免重复维护 SVG path 定义
+const COVER_ICONS = ICON_PATHS
 
 export default {
 	components: { TabBar },
@@ -137,7 +146,9 @@ export default {
 			markerTapPending: false,
 			cardVisible: false,
 			cardAnimationData: null,
-			overlayAnimationData: null
+			overlayAnimationData: null,
+			// 卡片动画进行中标志，防抖：动画期间忽略再次点击，避免重复触发导致闪烁
+			cardAnimating: false
 		}
 	},
 	computed: {
@@ -214,9 +225,11 @@ export default {
 		journalCount() {
 			return this.selectedLocationJournals.length
 		},
-		// 选中地点的照片总数
+		// 选中地点的照片总数（复用 store 的 photosByLocation getter，避免页面层重复 reduce）
 		photoCount() {
-			return this.selectedLocationJournals.reduce((sum, j) => sum + (j.photos ? j.photos.length : 0), 0)
+			return this.selectedLocation
+				? this.journalStore.photosByLocation(this.selectedLocation.id)
+				: 0
 		},
 		// 选中地点的到访次数
 		visitCount() {
@@ -247,9 +260,6 @@ export default {
 			return 'background: rgba(0, 0, 0, 0.4);'
 		}
 	},
-	onLoad() {
-		// statusBarHeight 由 statusbarMixin 提供
-	},
 	onShow() {
 		// 从二级页面返回时，刷新选中地点数据（手账可能已变更）
 		if (this.selectedLocation) {
@@ -275,6 +285,7 @@ export default {
 		// 清理所有定时器，避免页面销毁后回调残留
 		clearTimeout(this._markerTapTimer)
 		clearTimeout(this._cardEnterTimer)
+		clearTimeout(this._cardEnterAnimTimer)
 		clearTimeout(this._cardExitTimer)
 	},
 	methods: {
@@ -306,6 +317,11 @@ export default {
 			const idx = markerId - 1
 			if (idx >= 0 && idx < this.displayLocations.length) {
 				const loc = this.displayLocations[idx]
+				// 防抖：动画进行中或卡片已展开同地点时，忽略重复点击
+				if (this.cardAnimating) return
+				if (this.cardVisible && this.selectedLocation && this.selectedLocation.id === loc.id) {
+					return
+				}
 				this.center = { latitude: Number(loc.latitude), longitude: Number(loc.longitude) }
 
 				// 根据是否有手账记录区分交互
@@ -319,9 +335,14 @@ export default {
 					// 有手账记录：展开缩略二级页面，卡片内提供「写新手账」入口
 					this.selectedLocation = loc
 					this.cardVisible = true
+					this.cardAnimating = true
 					// 延迟一帧执行动画，确保原生 cover-view 渲染完成，避免首帧掉帧卡顿
 					this._cardEnterTimer = setTimeout(() => {
 						this.runCardEnterAnimation()
+						// 动画时长 350ms 后释放防抖锁
+						this._cardEnterAnimTimer = setTimeout(() => {
+							this.cardAnimating = false
+						}, 350)
 					}, 30)
 				}
 			} else {
@@ -349,16 +370,16 @@ export default {
 		},
 		// 定位到当前位置
 		locateCurrent() {
-			uni.getLocation({
-				type: 'gcj02',
-				success: (res) => {
+			permissionUtil.getLocationWithGuide({ type: 'gcj02' }, {
+				onSuccess: (res) => {
 					this.center = {
 						latitude: res.latitude,
 						longitude: res.longitude
 					}
 				},
-				fail: () => {
-					uni.showToast({ title: '定位失败，请检查定位权限', icon: 'none' })
+				onFail: (err) => {
+					console.warn('地图定位失败:', err)
+					uni.showToast({ title: '定位失败，请稍后重试', icon: 'none' })
 				}
 			})
 		},
@@ -523,6 +544,30 @@ export default {
 	padding: 16rpx 32rpx 48rpx;
 	transform: translateY(100%);
 	opacity: 0;
+}
+
+/* 空状态引导卡片：地点为空时居中显示 */
+.map-empty {
+	position: absolute;
+	left: 64rpx;
+	right: 64rpx;
+	top: 50%;
+	transform: translateY(-50%);
+	z-index: 5;
+	border-radius: 28rpx;
+	padding: 48rpx 32rpx;
+	text-align: center;
+}
+
+.me-title {
+	font-size: 32rpx;
+	font-weight: 600;
+	margin-bottom: 16rpx;
+}
+
+.me-desc {
+	font-size: 26rpx;
+	line-height: 1.5;
 }
 
 /* 拖拽手柄 */

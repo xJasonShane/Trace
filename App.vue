@@ -1,13 +1,51 @@
 <script>
+	import { useJournalStore } from '@/store/journal.js'
+	import { useProfileStore } from '@/store/profile.js'
+	import storage from '@/utils/storage.js'
+
 	export default {
 		onLaunch: function() {
-			console.log('App Launch')
-		},
-		onShow: function() {
-			console.log('App Show')
+			// 数据迁移：补全老用户数据中缺失的字段（如本次新增的 settings.onboarded）
+			// 必须在 store 初始化之前执行，避免 store 读取到旧数据并缓存
+			try {
+				storage.migrate()
+			} catch (e) {
+				console.error('数据迁移失败:', e)
+			}
+			// 首启引导：仅在首次启动时展示一次
+			try {
+				const profileStore = useProfileStore()
+				if (!profileStore.settings.onboarded) {
+					// 延迟到下一个 tick，确保首页已就绪
+					setTimeout(() => {
+						uni.showModal({
+							title: '欢迎使用拾光',
+							content: '用脚步丈量世界，用手账记录时光。\n点击地图任意位置或底部按钮，记录你的第一篇手账吧。',
+							showCancel: false,
+							confirmText: '开始记录',
+							confirmColor: '#E09080',
+							success: () => {
+								profileStore.markOnboarded()
+							}
+						})
+					}, 600)
+				}
+			} catch (e) {
+				console.error('首启引导失败:', e)
+			}
 		},
 		onHide: function() {
-			console.log('App Hide')
+			// App 进入后台时，若当前页面为手账编辑页且有未保存改动，自动保存草稿
+			try {
+				const pages = getCurrentPages()
+				const cur = pages[pages.length - 1]
+				if (cur && cur.route === 'pages/journal-edit/index' && cur.$vm && cur.$vm.isDirty) {
+					const journalStore = useJournalStore()
+					journalStore.saveDraft(cur.$vm.form)
+				}
+			} catch (e) {
+				console.error('自动保存草稿失败:', e)
+			}
 		},
 		onError: function(err) {
 			console.error('全局错误:', err)
@@ -139,7 +177,8 @@ view, text, image, scroll-view, input, textarea, button {
 .fab {
 	position: fixed;
 	right: 40rpx;
-	bottom: 160rpx;
+	/* 安全区适配：iPhone X 等设备底部 Home Indicator 区域不可点击 */
+	bottom: calc(160rpx + env(safe-area-inset-bottom));
 	width: 104rpx;
 	height: 104rpx;
 	background: var(--primary);
@@ -149,6 +188,11 @@ view, text, image, scroll-view, input, textarea, button {
 	justify-content: center;
 	box-shadow: 0 8rpx 28rpx rgba(224, 144, 128, 0.4);
 	z-index: 50;
+}
+
+/* 列表底部占位：避开 TabBar 与安全区，避免最后一条被遮挡 */
+.bottom-pad {
+	height: calc(140rpx + env(safe-area-inset-bottom));
 }
 
 /* 筛选标签栏（journal / search 共用） */
@@ -284,5 +328,17 @@ view, text, image, scroll-view, input, textarea, button {
 	border-radius: 999rpx;
 	font-size: 28rpx;
 	font-weight: 500;
+}
+
+/* Hero 区域导航按钮（journal-detail / location-detail Hero 内共用） */
+.nav-btn {
+	width: 64rpx;
+	height: 64rpx;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.85);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
 }
 </style>

@@ -1,23 +1,25 @@
 <template>
 	<view class="page" :class="themeClass">
 		<!-- Hero 区域 -->
-		<view class="hero">
-			<view class="status-bar-spacer" :style="{ height: statusBarHeight + 'px' }"></view>
-			<view class="hero-content">
-				<view class="hero-pattern"></view>
-				<view class="hero-icon">
-					<Icon name="mountain" :size="80" color="#C09080" :strokeWidth="1.4" />
+		<PageHero
+			gradient="linear-gradient(135deg, #EDCFC6 0%, #D9AFA2 100%)"
+			:contentHeight="360"
+			:iconOpacity="0.4"
+			:patternSpacing="40"
+			:patternOpacity="0.1"
+		>
+			<template #icon>
+				<Icon name="mountain" :size="80" color="#C09080" :strokeWidth="1.4" />
+			</template>
+			<template #nav>
+				<view class="nav-btn" @tap="goBack">
+					<Icon name="back" :size="32" :color="themeFgColor" :strokeWidth="2" />
 				</view>
-				<view class="hero-nav">
-					<view class="nav-btn" @tap="goBack">
-						<Icon name="back" :size="32" :color="themeFgColor" :strokeWidth="2" />
-					</view>
-					<view class="nav-btn" @tap="goToEdit">
-						<Icon name="edit" :size="30" :color="themeFgColor" :strokeWidth="2" />
-					</view>
+				<view class="nav-btn" @tap="goToEdit">
+					<Icon name="edit" :size="30" :color="themeFgColor" :strokeWidth="2" />
 				</view>
-			</view>
-		</view>
+			</template>
+		</PageHero>
 
 		<!-- 手账内容 -->
 		<view v-if="journal" class="content">
@@ -96,10 +98,10 @@
 <script>
 import Icon from '@/components/Icon.vue'
 import StarRating from '@/components/StarRating.vue'
+import PageHero from '@/components/PageHero.vue'
 import { useJournalStore } from '@/store/journal.js'
 import dateUtil from '@/utils/date.js'
 import themeMixin from '@/mixins/theme.js'
-import statusbarMixin from '@/mixins/statusbar.js'
 import { safeBack } from '@/utils/nav.js'
 import { RATING_DIMENSIONS, calcOverallRating } from '@/constants/rating.js'
 import { MOODS } from '@/constants/mood.js'
@@ -111,8 +113,8 @@ const MOOD_LABEL_MAP = MOODS.reduce((map, m) => {
 }, {})
 
 export default {
-	components: { Icon, StarRating },
-	mixins: [themeMixin, statusbarMixin],
+	components: { Icon, StarRating, PageHero },
+	mixins: [themeMixin],
 	setup() {
 		const journalStore = useJournalStore()
 		return { journalStore }
@@ -141,7 +143,6 @@ export default {
 		}
 	},
 	onLoad(options) {
-		// statusBarHeight 由 statusbarMixin 提供
 		if (options && options.id) {
 			this.journalId = options.id
 		}
@@ -183,60 +184,6 @@ export default {
 	min-height: 100vh;
 	background: var(--bg);
 	padding-bottom: 80rpx;
-}
-
-/* Hero 区域 */
-.hero {
-	background: linear-gradient(135deg, #EDCFC6 0%, #D9AFA2 100%);
-}
-
-.hero-content {
-	height: 360rpx;
-	position: relative;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	overflow: hidden;
-}
-
-.hero-pattern {
-	position: absolute;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	background:
-		repeating-linear-gradient(0deg, transparent, transparent 40rpx, rgba(255, 255, 255, 0.1) 40rpx, rgba(255, 255, 255, 0.1) 42rpx),
-		repeating-linear-gradient(90deg, transparent, transparent 40rpx, rgba(255, 255, 255, 0.05) 40rpx, rgba(255, 255, 255, 0.05) 42rpx);
-	pointer-events: none;
-}
-
-.hero-icon {
-	opacity: 0.4;
-	position: relative;
-	z-index: 1;
-}
-
-.hero-nav {
-	position: absolute;
-	top: 24rpx;
-	left: 24rpx;
-	right: 24rpx;
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	z-index: 2;
-}
-
-.nav-btn {
-	width: 64rpx;
-	height: 64rpx;
-	border-radius: 50%;
-	background: rgba(255, 255, 255, 0.85);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
 }
 
 /* 内容区 */

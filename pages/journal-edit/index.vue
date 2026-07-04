@@ -170,13 +170,13 @@ import { useJournalStore } from '@/store/journal.js'
 import { useLocationStore } from '@/store/location.js'
 import dateUtil from '@/utils/date.js'
 import { safeBack } from '@/utils/nav.js'
+import permissionUtil from '@/utils/permission.js'
 import { RATING_DIMENSIONS, DEFAULT_RATINGS } from '@/constants/rating.js'
 import {
 	combineDateWithCurrentTime,
 	buildJournalData,
 	shouldUpdateCoordinates,
-	buildLocationUpdatePayload,
-	calcLocationPhotoCount
+	buildLocationUpdatePayload
 } from './save-helpers.js'
 
 export default {
@@ -210,11 +210,14 @@ export default {
 				tags: []
 			},
 			locating: false,
-			ratingDimensions: RATING_DIMENSIONS
+			ratingDimensions: RATING_DIMENSIONS,
+			// 表单初始快照，用于判断是否有未保存改动
+			initialFormSnapshot: null,
+			// 草稿恢复提示
+			draftSavedAt: ''
 		}
 	},
 	onLoad(options) {
-		// statusBarHeight 由 statusbarMixin 提供
 		// _timers 由 timersMixin 提供
 		// 默认日期为当天
 		this.form.date = dateUtil.formatDate(new Date())
@@ -241,6 +244,25 @@ export default {
 			this.validatedLocationId = options.locationId
 			this.loadLocation()
 		}
+
+		// 仅新建模式检测草稿
+		if (!this.isEdit) {
+			this.checkDraftRecovery()
+		}
+	},
+	onBackPress() {
+		// 系统返回拦截：有未保存改动时弹确认
+		if (this.isDirty) {
+			this.confirmDiscard()
+			return true // 阻止默认返回
+		}
+		return false
+	},
+	onUnload() {
+		// 离开页面时若有未保存改动，自动保存草稿
+		if (this.isDirty && !this.saving) {
+			this.journalStore.saveDraft(this.form)
+		}
 	},
 	computed: {
 		locationSuggestions() {
@@ -249,6 +271,25 @@ export default {
 			return this.locationStore.locations
 				.filter(l => l.name.toLowerCase().includes(kw))
 				.slice(0, 5)
+		},
+		// 表单是否被修改（与初始快照对比）
+		isDirty() {
+			if (!this.initialFormSnapshot) return false
+			const snap = this.initialFormSnapshot
+			const f = this.form
+			return (
+				f.title !== snap.title ||
+				f.locationName !== snap.locationName ||
+				f.content !== snap.content ||
+				f.mood !== snap.mood ||
+				f.date !== snap.date ||
+				f.locationAddress !== snap.locationAddress ||
+				f.locationLat !== snap.locationLat ||
+				f.locationLng !== snap.locationLng ||
+				JSON.stringify(f.photos) !== JSON.stringify(snap.photos) ||
+				JSON.stringify(f.ratings) !== JSON.stringify(snap.ratings) ||
+				JSON.stringify(f.tags) !== JSON.stringify(snap.tags)
+			)
 		}
 	},
 	methods: {
@@ -278,6 +319,7 @@ export default {
 					this.form.locationLng = loc.longitude || 0
 					this.form.locationAddress = loc.address || ''
 				}
+				this.snapshotForm()
 			} else {
 				uni.showToast({ title: '手账不存在', icon: 'none' })
 				this._timers.push(setTimeout(() => this.goBack(), 1500))
@@ -292,6 +334,79 @@ export default {
 				this.form.locationAddress = loc.address || ''
 				this.validatedLocationId = loc.id
 			}
+			this.snapshotForm()
+		},
+		// 保存表单初始快照，用于脏检测
+		snapshotForm() {
+			this.initialFormSnapshot = {
+				title: this.form.title,
+				locationName: this.form.locationName,
+				locationLat: this.form.locationLat,
+				locationLng: this.form.locationLng,
+				locationAddress: this.form.locationAddress,
+				content: this.form.content,
+				photos: [...this.form.photos],
+				mood: this.form.mood,
+				date: this.form.date,
+				ratings: { ...this.form.ratings },
+				tags: [...this.form.tags]
+			}
+		},
+		// 检测是否存在草稿并询问恢复
+		checkDraftRecovery() {
+			const draft = this.journalStore.getDraft()
+			if (!draft || !draft.form) {
+				this.snapshotForm()
+				return
+			}
+			this.draftSavedAt = draft.savedAt || ''
+			uni.showModal({
+				title: '发现未保存的草稿',
+				content: this.draftSavedAt ? `上次编辑时间：${this.draftSavedAt}，是否恢复？` : '是否恢复上次未保存的内容？',
+				confirmText: '恢复',
+				cancelText: '丢弃',
+				success: (res) => {
+					if (res.confirm) {
+						// 恢复草稿内容
+						const f = draft.form
+						this.form.title = f.title || ''
+						this.form.locationName = f.locationName || ''
+						this.form.locationLat = f.locationLat || 0
+						this.form.locationLng = f.locationLng || 0
+						this.form.locationAddress = f.locationAddress || ''
+						this.form.content = f.content || ''
+						this.form.photos = f.photos ? [...f.photos] : []
+						this.form.mood = f.mood || '😊'
+						this.form.date = f.date || dateUtil.formatDate(new Date())
+						this.form.ratings = { ...DEFAULT_RATINGS, ...(f.ratings || {}) }
+						this.form.tags = f.tags ? [...f.tags] : []
+						this.snapshotForm()
+						uni.showToast({ title: '草稿已恢复', icon: 'success' })
+					} else {
+						// 丢弃草稿
+						this.journalStore.clearDraft()
+						this.snapshotForm()
+					}
+				}
+			})
+		},
+		// 退出确认：保留编辑 / 丢弃 / 保存
+		confirmDiscard() {
+			uni.showActionSheet({
+				itemList: ['保存并退出', '丢弃改动', '继续编辑'],
+				success: (res) => {
+					if (res.tapIndex === 0) {
+						// 保存并退出
+						this.save()
+					} else if (res.tapIndex === 1) {
+						// 丢弃改动，清除草稿并退出
+						this.initialFormSnapshot = null
+						this.journalStore.clearDraft()
+						this.goBack()
+					}
+					// tapIndex === 2: 继续编辑，不做任何操作
+				}
+			})
 		},
 		onLocationInput() {
 			this.showSuggestions = true
@@ -352,9 +467,8 @@ export default {
 			if (this.locating) return
 			this.locating = true
 			uni.showLoading({ title: '定位中…' })
-			uni.getLocation({
-				type: 'gcj02',
-				success: (res) => {
+			permissionUtil.getLocationWithGuide({ type: 'gcj02' }, {
+				onSuccess: (res) => {
 					uni.hideLoading()
 					this.locating = false
 					this.form.locationLat = res.latitude || 0
@@ -377,12 +491,10 @@ export default {
 					}
 					this.showSuggestions = false
 				},
-				fail: (err) => {
+				onFail: (err) => {
 					uni.hideLoading()
 					this.locating = false
-					if (err.errMsg && err.errMsg.indexOf('cancel') === -1) {
-						uni.showToast({ title: '定位失败，请检查定位权限', icon: 'none' })
-					}
+					console.warn('定位失败:', err)
 				}
 			})
 		},
@@ -474,7 +586,7 @@ export default {
 	},
 	/**
 	 * 解析并处理地点ID：新地点自动创建，已有地点坐标变化时更新
-	 * @returns {string} 地点ID
+	 * @returns {string|null} 地点ID，存储失败时返回 null
 	 */
 	resolveLocationId() {
 		let locationId = this.validatedLocationId || this.locationId
@@ -488,12 +600,14 @@ export default {
 				latitude: this.form.locationLat || 0,
 				longitude: this.form.locationLng || 0
 			})
+			if (!loc) return null // 存储失败
 			locationId = loc.id
 		} else if (locName && locationId) {
 			// 已有地点 — 坐标变化时更新
 			const loc = this.locationStore.getLocation(locationId)
 			if (shouldUpdateCoordinates(loc, this.form)) {
-				this.locationStore.updateLocation(locationId, buildLocationUpdatePayload(this.form, loc))
+				const updated = this.locationStore.updateLocation(locationId, buildLocationUpdatePayload(this.form, loc))
+				if (!updated) return null // 存储失败
 			}
 		}
 
@@ -520,14 +634,11 @@ export default {
 		return this.journalStore.addJournal(data)
 	},
 	/**
-	 * 更新地点统计数据
+	 * 同步关联地点的统计数据（跨 store 同步逻辑收敛至 journalStore.syncLocationStats）
 	 * @param {string} locationId - 地点ID
 	 */
 	updateLocationStats(locationId) {
-		if (!locationId) return
-		const journals = this.journalStore.getJournalsByLocation(locationId)
-		const photoCount = calcLocationPhotoCount(journals)
-		this.locationStore.updateStats(locationId, journals.length, photoCount)
+		this.journalStore.syncLocationStats(locationId)
 	},
 	/**
 	 * 处理保存结果
@@ -539,6 +650,9 @@ export default {
 			this.handleSaveError()
 			return
 		}
+		// 保存成功后清除草稿和脏标记，避免 onUnload 再次写入草稿
+		this.initialFormSnapshot = null
+		this.journalStore.clearDraft()
 		this.updateLocationStats(locationId)
 		uni.showToast({ title: '保存成功', icon: 'success' })
 		this._timers.push(setTimeout(() => {
@@ -553,6 +667,11 @@ export default {
 		uni.showToast({ title: '保存失败', icon: 'none' })
 	},
 		goBack() {
+			// 顶部返回按钮：未保存改动走确认流程
+			if (this.isDirty) {
+				this.confirmDiscard()
+				return
+			}
 			safeBack('/pages/index/index')
 		},
 	}

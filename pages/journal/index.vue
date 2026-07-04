@@ -26,7 +26,7 @@
 		</scroll-view>
 
 		<!-- 内容区 -->
-		<scroll-view class="content" scroll-y>
+		<scroll-view class="content" scroll-y @scrolltolower="loadMore">
 			<!-- 空状态 -->
 			<EmptyState
 				v-if="filteredJournals.length === 0"
@@ -68,6 +68,14 @@
 						</view>
 					</view>
 				</view>
+
+				<!-- 分页加载状态 -->
+				<view v-if="hasMore" class="list-load-more" @tap="loadMore">
+					<text class="load-more-text">上拉加载更多</text>
+				</view>
+				<view v-else-if="filteredJournals.length > pageSize" class="list-load-end">
+					<text class="load-end-text">— 已加载全部 —</text>
+				</view>
 			</view>
 
 			<!-- 底部占位 -->
@@ -101,7 +109,6 @@ import DeleteModal from '@/components/DeleteModal.vue'
 import themeMixin from '@/mixins/theme.js'
 import statusbarMixin from '@/mixins/statusbar.js'
 import { useJournalStore } from '@/store/journal.js'
-import { useLocationStore } from '@/store/location.js'
 import dateUtil from '@/utils/date.js'
 import { getMoodColor } from '@/constants/mood.js'
 
@@ -110,8 +117,7 @@ export default {
 	mixins: [themeMixin, statusbarMixin],
 	setup() {
 		const journalStore = useJournalStore()
-		const locationStore = useLocationStore()
-		return { journalStore, locationStore }
+		return { journalStore }
 	},
 	data() {
 		return {
@@ -125,7 +131,10 @@ export default {
 			deleteVisible: false,
 			deleteTargetId: '',
 			deleteTargetTitle: '',
-			brokenThumbs: {}
+			brokenThumbs: {},
+			// 分页加载：首屏渲染条数与每页增量
+			pageSize: 20,
+			visibleCount: 20
 		}
 	},
 	computed: {
@@ -145,9 +154,17 @@ export default {
 			}
 			return all
 		},
+		// 当前可见的手账（分页切片）
+		pagedJournals() {
+			return this.filteredJournals.slice(0, this.visibleCount)
+		},
+		// 是否还有更多未加载
+		hasMore() {
+			return this.visibleCount < this.filteredJournals.length
+		},
 		groupedFiltered() {
 			const groups = {}
-			this.filteredJournals.forEach(j => {
+			this.pagedJournals.forEach(j => {
 				const g = dateUtil.getDateGroup(j.createdAt)
 				if (!groups[g]) groups[g] = []
 				groups[g].push(j)
@@ -156,14 +173,10 @@ export default {
 		}
 	},
 	onLoad(options) {
-		// statusBarHeight 由 statusbarMixin 提供
 		// 支持从"我的页面"跳转时携带筛选条件
 		if (options && options.filter && this.filters.some(f => f.value === options.filter)) {
 			this.currentFilter = options.filter
 		}
-	},
-	onShow() {
-		// 数据从 store 获取，自动响应式更新
 	},
 	methods: {
 		formatRelative(date) {
@@ -174,6 +187,16 @@ export default {
 		},
 		setFilter(value) {
 			this.currentFilter = value
+			// 切换筛选时重置分页，避免不同 filter 下 visibleCount 残留
+			this.visibleCount = this.pageSize
+		},
+		/**
+		 * 滚动触底加载更多
+		 * 已无更多时直接返回，避免无意义 setData
+		 */
+		loadMore() {
+			if (!this.hasMore) return
+			this.visibleCount += this.pageSize
 		},
 		goSearch() {
 			uni.navigateTo({ url: '/pages/search/index' })
@@ -203,13 +226,9 @@ export default {
 			this.deleteTargetId = ''
 			this.deleteTargetTitle = ''
 			if (success) {
-				// 更新关联地点的统计数据
+				// 同步关联地点的统计数据（跨 store 同步逻辑收敛至 journalStore.syncLocationStats）
 				if (locationId) {
-					const journals = this.journalStore.getJournalsByLocation(locationId)
-					const photoCount = journals.reduce(
-						(sum, j) => sum + (j.photos ? j.photos.length : 0), 0
-					)
-					this.locationStore.updateStats(locationId, journals.length, photoCount)
+					this.journalStore.syncLocationStats(locationId)
 				}
 				uni.showToast({ title: '已删除', icon: 'success' })
 			} else {
@@ -356,7 +375,21 @@ export default {
 	background: rgba(200, 80, 74, 0.1);
 }
 
-.bottom-pad {
-	height: 140rpx;
+/* 分页加载状态 */
+.list-load-more,
+.list-load-end {
+	text-align: center;
+	padding: 32rpx 0;
+}
+
+.load-more-text {
+	font-size: 26rpx;
+	color: var(--text-tertiary);
+}
+
+.load-end-text {
+	font-size: 24rpx;
+	color: var(--text-tertiary);
+	letter-spacing: 0.1em;
 }
 </style>

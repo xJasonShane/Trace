@@ -81,7 +81,7 @@ export default {
 .empty-btn {
 	padding: 0 48rpx;
 	height: 80rpx;
-	background: #E09080;
+	background: var(--primary);
 	border-radius: 24rpx;
 	display: flex;
 	align-items: center;

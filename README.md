@@ -259,43 +259,63 @@ HBuilderX 是 DCloud 官方 IDE，对 uni-app 项目提供最佳支持，开箱�
 
 ```
 Trace/
-├── components/           # 可复用组件
-│   ├── DeleteModal.vue   # 删除确认弹窗
-│   ├── EmptyState.vue    # 空状态组件
-│   ├── Icon.vue          # SVG 图标组件
-│   ├── ImageCropper.vue  # 图片裁剪组件
-│   ├── MoodSelect.vue    # 心情选择器
-│   ├── PhotoUpload.vue   # 照片上传组件
-│   ├── StarRating.vue    # 星级评分组件
-│   └── TabBar.vue        # 底部导航栏
-├── mixins/               # Vue Mixin
-│   └── theme.js          # 主题切换 Mixin（浅色/深色模式）
-├── pages/                # 页面目录
-│   ├── index/            # 首页（地图视图）
-│   ├── journal/          # 手账列表
-│   ├── journal-detail/   # 手账详情
-│   ├── journal-edit/     # 编辑/新建手账
-│   ├── location-detail/  # 地点详情
-│   ├── profile/          # 个人中心
-│   ├── profile-edit/     # 编辑资料
-│   ├── search/           # 搜索页
-│   └── stats/            # 统计页
-├── store/                # Pinia 状态管理
-│   ├── journal.js        # 手账数据 Store
-│   ├── location.js       # 地点数据 Store
-│   └── profile.js        # 用户资料 Store
-├── utils/                # 工具函数
-│   ├── date.js           # 日期处理
-│   ├── image.js          # 图片处理
-│   └── storage.js        # 本地存储封装
-├── static/               # 静态资源（图片、图标等）
-├── App.vue               # 应用入口组件
-├── main.js               # 主入口文件（Pinia 装配）
-├── pages.json            # 页面路由配置
-├── manifest.json         # 应用配置与平台参数
-├── uni.scss              # 全局样式变量
-└── uni.promisify.adaptor.js  # Promise 化适配器
+├── components/               # 可复用组件
+│   ├── DeleteModal.vue       # 删除确认弹窗
+│   ├── EmptyState.vue        # 空状态组件
+│   ├── Icon.vue              # SVG 图标组件
+│   ├── ImageCropper.vue      # 图片裁剪组件
+│   ├── MoodSelect.vue        # 心情选择器
+│   ├── PageHero.vue          # 详情页顶部 Hero 区域
+│   ├── PhotoUpload.vue       # 照片上传组件
+│   ├── StarRating.vue        # 星级评分组件
+│   └── TabBar.vue            # 底部导航栏
+├── constants/                # 业务常量统一出口
+│   ├── cover.js              # 封面色调（5 种色调 + 描边色 + 随机分配）
+│   ├── icons.js              # 图标 SVG path 常量（与 Icon 组件 name 对应）
+│   ├── index.js              # 统一导出入口（@/constants 即可全量导入）
+│   ├── mood.js               # 心情 emoji 列表与色值映射
+│   └── rating.js             # 评分维度定义与综合评分计算
+├── mixins/                   # Vue Mixin
+│   ├── statusbar.js          # 状态栏高度获取（自定义导航栏占位）
+│   ├── theme.js              # 主题切换（浅色/深色模式 + 主题色计算属性）
+│   └── timers.js             # 定时器统一管理（页面/组件销毁时自动清理）
+├── pages/                    # 页面目录
+│   ├── index/                # 首页（地图视图）
+│   ├── journal/              # 手账列表
+│   ├── journal-detail/       # 手账详情
+│   ├── journal-edit/         # 编辑/新建手账（含 save-helpers 纯函数 + 单测）
+│   ├── location-detail/      # 地点详情
+│   ├── profile/              # 个人中心
+│   ├── profile-edit/         # 编辑资料
+│   ├── search/               # 搜索页
+│   └── stats/                # 统计页
+├── store/                    # Pinia 状态管理
+│   ├── journal.js            # 手账数据 Store
+│   ├── location.js           # 地点数据 Store
+│   └── profile.js            # 用户资料 Store
+├── utils/                    # 工具函数
+│   ├── date.js               # 日期处理
+│   ├── image.js              # 图片处理
+│   ├── nav.js                # 导航工具（safeBack 安全返回上一页）
+│   ├── permission.js         # 权限被拒引导（定位/相机/相册跨端处理）
+│   └── storage.js            # 本地存储封装（含备份/恢复/数据迁移）
+├── static/                   # 静态资源（图片、图标等）
+├── androidPrivacy.json       # Android 隐私协议
+├── App.vue                   # 应用入口组件（数据迁移 + 草稿自动保存）
+├── index.html                # H5 入口模板
+├── main.js                   # 主入口文件（Pinia 装配）
+├── manifest.json             # 应用配置与平台参数
+├── package-lock.json         # 依赖版本锁定
+├── package.json              # 项目依赖与脚本
+├── pages.json                # 页面路由配置
+├── uni.promisify.adaptor.js  # Promise 化适配器
+└── uni.scss                  # 全局样式变量
 ```
+
+> 💡 **目录职责补充说明**
+>
+> - **`constants/`** — 集中管理业务常量（心情、评分维度、封面色调、图标 SVG），避免在多处硬编码导致不一致。`index.js` 为统一出口，业务代码可 `import { MOODS, RATING_DIMENSIONS, COVER_COLORS } from '@/constants'` 一次性导入。
+> - **`mixins/`** — 抽取跨页面/组件复用的通用逻辑：`theme.js` 提供主题切换与主题色计算属性、`statusbar.js` 用于自定义导航栏的状态栏占位、`timers.js` 用于统一清理 `setTimeout` 防止内存泄漏。
 
 ---
 
@@ -397,6 +417,17 @@ Trace/
 | 辅助色 | `$seed-accent` | `#7FA3C8` | 淡蓝色 |
 | 表面色 | `$seed-surface` | `#FFFFFF` | 纯白卡片 |
 
+> ⚠️ **SCSS 与 CSS 变量命名遗留说明**
+>
+> 项目中存在 SCSS 变量（[uni.scss](uni.scss)）与 CSS 变量（[App.vue](App.vue)）两套体系，二者主/辅色命名**不一致**，使用时请以颜色值为准，避免混淆：
+>
+> | 颜色值 | SCSS 变量 | CSS 变量 | 含义 |
+> |--------|-----------|----------|------|
+> | `#E09080`（橙红） | `$accent` / `$seed-primary` | `--primary` | 主色 |
+> | `#7FA3C8`（蓝） | `$accent-secondary` / `$seed-accent` | `--accent` | 辅色 |
+>
+> 关键差异：SCSS 的 `$accent` 指主色（橙红），而 CSS 的 `--accent` 指辅色（蓝），两者同名但含义不同，属历史命名遗留。新增样式时建议直接使用 `$seed-primary` / `$seed-accent`，避免歧义。
+
 ### 扩展色彩
 
 | 用途 | 变量名 | 色值 |
@@ -487,29 +518,34 @@ interface Journal {
 
 **主要 Getter：**
 
+> 注：`getJournal` / `getJournalsByLocation` / `photosByLocation` / `search` 采用 curried getter 形式声明（`store.fn(arg)` 调用语法与 action 一致，但语义为只读、不触发 mutation）。
+
 | Getter | 返回类型 | 说明 |
 |--------|----------|------|
 | `sortedJournals` | `Journal[]` | 按创建时间降序排列 |
-| `groupedJournals` | `Object` | 按日期分组（今天/昨天/本周/更早） |
-| `journalsByLocation` | `Object` | 按地点 ID 分组 |
-| `moodDistribution` | `Array` | 心情分布统计（含百分比） |
-| `monthlyTrend` | `Array` | 最近 12 个月月度趋势 |
-| `consecutiveDays` | `number` | 最长连续记录天数 |
-| `thisMonthCount` | `number` | 本月新增数量 |
 | `totalCount` | `number` | 手账总数 |
 | `totalPhotos` | `number` | 照片总数 |
+| `moodDistribution` | `Array` | 心情分布统计（含百分比，分母为有 mood 的手账数） |
+| `monthlyTrend` | `Array` | 最近 12 个月月度趋势（含 `year`/`month`/`count`） |
+| `consecutiveDays` | `number` | 最长连续记录天数 |
+| `thisMonthCount` | `number` | 本月新增数量 |
+| `getJournal` | `(id) => Journal \| undefined` | 按 ID 获取手账（curried getter） |
+| `getJournalsByLocation` | `(locationId) => Journal[]` | 按地点获取手账（curried getter，依赖 `sortedJournals`） |
+| `photosByLocation` | `(locationId) => number` | 按地点统计照片总数（curried getter，避免页面层重复 reduce） |
+| `search` | `(keyword) => Journal[]` | 多维度搜索（标题/内容/地点名/标签，curried getter） |
 
 **主要 Action：**
 
 | Action | 参数 | 返回值 | 说明 |
 |--------|------|--------|------|
-| `addJournal` | `data: JournalInput` | `Journal` | 新增手账，自动计算综合评分 |
-| `updateJournal` | `id: string, data: Partial<Journal>` | `Journal \| null` | 更新手账，评分变更时自动重算 |
-| `deleteJournal` | `id: string` | `boolean` | 删除手账 |
-| `getJournal` | `id: string` | `Journal \| undefined` | 获取手账详情 |
-| `getJournalsByLocation` | `locationId: string` | `Journal[]` | 按地点获取手账 |
-| `search` | `keyword: string` | `Journal[]` | 多维度搜索（标题/内容/地点/标签） |
-| `filterBy` | `filter: 'recent' \| 'photos'` | `Journal[]` | 按条件筛选 |
+| `addJournal` | `data: JournalInput` | `Journal \| null` | 新增手账，自动计算综合评分；持久化失败回滚 |
+| `updateJournal` | `id, data: Partial<Journal>` | `Journal \| null` | 更新手账，评分变更自动重算；移除的照片文件自动清理 |
+| `deleteJournal` | `id: string` | `boolean` | 删除手账；持久化成功后异步清理关联照片文件 |
+| `syncLocationStats` | `locationId: string` | `boolean` | 同步指定地点的手账/照片统计到 location store |
+| `unlinkLocation` | `locationId: string` | `number` | 解除地点与关联手账的引用关系（地点删除时调用） |
+| `saveDraft` | `draft: Object` | `void` | 保存草稿（App 进入后台且编辑页有改动时自动调用） |
+| `getDraft` | - | `Object \| null` | 读取草稿 |
+| `clearDraft` | - | `void` | 清除草稿 |
 
 ### 地点 (Location)
 
@@ -535,24 +571,23 @@ type CoverColor = 'warm' | 'blue' | 'lavender' | 'green' | 'gold'
 
 **主要 Getter：**
 
+> 注：`getLocation` / `search` 采用 curried getter 形式声明。
+
 | Getter | 返回类型 | 说明 |
 |--------|----------|------|
 | `totalCount` | `number` | 地点总数 |
-| `selectedLocation` | `Location \| null` | 当前选中地点 |
-| `popularLocations` | `Location[]` | 按访问次数降序排列 |
+| `getLocation` | `(id) => Location \| undefined` | 按 ID 获取地点（curried getter） |
+| `search` | `(keyword) => Location[]` | 按名称/地址搜索（curried getter） |
 
 **主要 Action：**
 
 | Action | 参数 | 返回值 | 说明 |
 |--------|------|--------|------|
-| `addLocation` | `data: LocationInput` | `Location` | 新增地点，随机分配封面色调 |
-| `updateLocation` | `id: string, data: Partial<Location>` | `Location \| null` | 更新地点信息 |
+| `addLocation` | `data: LocationInput` | `Location \| null` | 新增地点，随机分配封面色调；持久化失败回滚 |
+| `updateLocation` | `id, data: Partial<Location>` | `Location \| null` | 更新地点信息 |
 | `deleteLocation` | `id: string` | `boolean` | 删除地点 |
-| `getLocation` | `id: string` | `Location \| undefined` | 获取地点详情 |
-| `search` | `keyword: string` | `Location[]` | 按名称/地址搜索地点 |
-| `findOrCreate` | `data: LocationInput` | `Location` | 查找或创建地点（智能匹配） |
-| `updateStats` | `locationId, journalCount, photoCount` | `void` | 更新地点统计数据 |
-| `setSelected` | `id: string \| null` | `void` | 设置当前选中地点 |
+| `findOrCreate` | `data: LocationInput` | `Location` | 查找或创建地点（名称 + 坐标智能匹配，阈值 0.0005°，约 55m） |
+| `updateStats` | `locationId, journalCount, photoCount` | `boolean` | 更新地点统计与最近访问日期 |
 
 ### 用户资料 (Profile)
 
@@ -571,24 +606,19 @@ interface Settings {
   notifications: boolean  // 通知开关
   theme: 'light' | 'dark' // 主题模式
   backup: boolean         // 自动备份开关
+  onboarded: boolean      // 首启引导是否已完成（首次启动后置 true，后续不再展示）
 }
 ```
 
-**主要 Getter：**
-
-| Getter | 返回类型 | 说明 |
-|--------|----------|------|
-| `journalCount` | `number` | 手账总数（从 journal store 获取） |
-| `locationCount` | `number` | 地点总数（从 location store 获取） |
-| `photoCount` | `number` | 照片总数（从 journal store 获取） |
-
 **主要 Action：**
 
-| Action | 参数 | 说明 |
-|--------|------|------|
-| `saveProfile` | `data: Partial<Profile>` | 保存用户资料 |
-| `saveSettings` | `data: Partial<Settings>` | 保存设置项 |
-| `updateAvatar` | `path: string` | 更新头像 |
+| Action | 参数 | 返回值 | 说明 |
+|--------|------|--------|------|
+| `saveProfile` | `data: Partial<Profile>` | `boolean` | 保存用户资料；持久化失败回滚 |
+| `saveSettings` | `data: Partial<Settings>` | `boolean` | 保存设置项；持久化失败回滚 |
+| `markOnboarded` | - | `boolean` | 标记首启引导已完成（仅未完成时写入） |
+
+> 💡 **跨 Store 协作说明**：`profile` 页面展示的「手账数 / 地点数 / 照片数」并非 profile store 的 getter，而是页面层直接调用 `journalStore.totalCount` / `locationStore.totalCount` / `journalStore.totalPhotos` 组合得到。
 
 ---
 

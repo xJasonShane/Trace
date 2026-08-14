@@ -15,6 +15,9 @@
 				<view class="nav-btn" @tap="goBack">
 					<Icon name="back" :size="32" :color="themeFgColor" :strokeWidth="2" />
 				</view>
+				<view class="nav-btn" @tap="toggleFavorite">
+					<Icon name="star" :size="28" :color="starColor" :strokeWidth="1.8" :fill="starFill" />
+				</view>
 				<view class="nav-btn" @tap="goToEdit">
 					<Icon name="edit" :size="30" :color="themeFgColor" :strokeWidth="2" />
 				</view>
@@ -140,6 +143,14 @@ export default {
 		moodLabel() {
 			if (!this.journal || !this.journal.mood) return '未设置'
 			return MOOD_LABEL_MAP[this.journal.mood] || '未设置'
+		},
+		starColor() {
+			if (!this.journal) return this.themeFgColor
+			return this.journal.favorite ? '#D9A54A' : this.themeFgColor
+		},
+		starFill() {
+			if (!this.journal) return 'none'
+			return this.journal.favorite ? '#D9A54A' : 'none'
 		}
 	},
 	onLoad(options) {

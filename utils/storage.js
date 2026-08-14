@@ -17,6 +17,7 @@ const KEYS = {
 	BACKUP: 'trace_backup',
 	AUTO_SNAPSHOT: 'trace_auto_snapshot',
 	JOURNAL_DRAFT: 'trace_journal_draft',
+	SEARCH_HISTORY: 'trace_search_history',
 	// 数据格式版本号键：记录当前已应用的 schema 版本，用于判断是否需要迁移
 	SCHEMA_VERSION: 'trace_schema_version'
 }
@@ -474,6 +475,40 @@ function rollbackFromSnapshot() {
 	}
 }
 
+/**
+ * 读取搜索历史
+ * @returns {string[]}
+ */
+function getSearchHistory() {
+	return get(KEYS.SEARCH_HISTORY, [])
+}
+
+/**
+ * 添加搜索关键词到历史（去重，最多10条）
+ * @param {string} keyword
+ */
+function addSearchHistory(keyword) {
+	const kw = keyword.trim()
+	if (!kw) return
+	const history = getSearchHistory()
+	const idx = history.indexOf(kw)
+	if (idx !== -1) {
+		history.splice(idx, 1)
+	}
+	history.unshift(kw)
+	if (history.length > 10) {
+		history.splice(10)
+	}
+	set(KEYS.SEARCH_HISTORY, history)
+}
+
+/**
+ * 清空搜索历史
+ */
+function clearSearchHistory() {
+	set(KEYS.SEARCH_HISTORY, [])
+}
+
 export default {
 	KEYS,
 	SCHEMA_VERSION,
@@ -489,5 +524,8 @@ export default {
 	createAutoSnapshot,
 	restoreBackup,
 	rollbackFromSnapshot,
-	migrate
+	migrate,
+	getSearchHistory,
+	addSearchHistory,
+	clearSearchHistory
 }

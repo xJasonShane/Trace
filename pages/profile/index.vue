@@ -45,7 +45,7 @@
 				</view>
 				<view class="settings-row">
 					<view class="settings-icon icon-theme">
-						<Icon name="sun" :size="34" color="#FFFFFF" :strokeWidth="1.8" />
+						<Icon :name="themeIcon" :size="34" color="#FFFFFF" :strokeWidth="1.8" />
 					</view>
 					<text class="settings-label">主题外观</text>
 					<view
@@ -136,6 +136,9 @@ export default {
 		},
 		settings() {
 			return this.profileStore.settings
+		},
+		themeIcon() {
+			return this.settings.theme === 'dark' ? 'moon' : 'sun'
 		},
 		journalCount() {
 			return this.journalStore.totalCount

@@ -21,6 +21,14 @@
 			</template>
 		</PageHero>
 
+		<!-- 撤销删除提示 -->
+		<view v-if="pendingDelete" class="undo-bar">
+			<text class="undo-text">已删除「{{ pendingDelete.title }}」</text>
+			<view class="undo-btn" @tap="undoDelete">
+				<text class="undo-btn-text">撤销</text>
+			</view>
+		</view>
+
 		<!-- 地点信息 -->
 		<view v-if="location" class="info-section">
 			<view class="info-title">{{ location.name }}</view>
@@ -92,6 +100,36 @@
 		<view v-if="location" class="fab" @tap="goToNewJournal">
 			<Icon name="plus" :size="48" color="#FFFFFF" :strokeWidth="2" />
 		</view>
+
+		<!-- 编辑地点弹窗 -->
+		<view v-if="editVisible" class="modal-overlay" @tap="cancelEdit">
+			<view class="modal-box" @tap.stop>
+				<view class="modal-icon" style="background: rgba(224, 144, 128, 0.15);">
+					<Icon name="edit" :size="44" color="#E09080" :strokeWidth="2" />
+				</view>
+				<text class="modal-title">编辑地点信息</text>
+				<input
+					class="edit-input"
+					v-model="editName"
+					placeholder="地点名称"
+					placeholder-style="color: #A5A09A;"
+				/>
+				<input
+					class="edit-input"
+					v-model="editAddress"
+					placeholder="地址（选填）"
+					placeholder-style="color: #A5A09A;"
+				/>
+				<view class="modal-actions">
+					<view class="modal-btn modal-btn-cancel" @tap="cancelEdit">
+						<text class="modal-btn-text">取消</text>
+					</view>
+					<view class="modal-btn modal-btn-danger" @tap="confirmEdit">
+						<text class="modal-btn-text-danger">保存</text>
+					</view>
+				</view>
+			</view>
+		</view>
 	</view>
 </template>
 
@@ -118,7 +156,11 @@ export default {
 	data() {
 		return {
 			locationId: '',
-			loaded: false
+			loaded: false,
+			editVisible: false,
+			editName: '',
+			editAddress: '',
+			pendingDelete: null
 		}
 	},
 	// _timers 由 timersMixin 提供
@@ -186,7 +228,7 @@ export default {
 				itemList: ['编辑地点信息', '删除地点'],
 				success: (res) => {
 					if (res.tapIndex === 0) {
-						uni.showToast({ title: '编辑功能开发中', icon: 'none' })
+						this.openEdit()
 					} else if (res.tapIndex === 1) {
 						this.confirmDelete()
 					}
@@ -208,6 +250,53 @@ export default {
 					}
 				}
 			})
+		},
+		openEdit() {
+			if (!this.location) return
+			this.editName = this.location.name || ''
+			this.editAddress = this.location.address || ''
+			this.editVisible = true
+		},
+		cancelEdit() {
+			this.editVisible = false
+			this.editName = ''
+			this.editAddress = ''
+		},
+		confirmEdit() {
+			const name = (this.editName || '').trim()
+			if (!name) {
+				uni.showToast({ title: '请输入地点名称', icon: 'none' })
+				return
+			}
+			this.locationStore.updateLocation(this.locationId, {
+				name,
+				address: (this.editAddress || '').trim()
+			})
+			this.editVisible = false
+			this.editName = ''
+			this.editAddress = ''
+			uni.showToast({ title: '已保存', icon: 'success' })
+		},
+		undoDelete() {
+			if (!this.pendingDelete) return
+			clearTimeout(this.pendingDelete.timer)
+			const { location } = this.pendingDelete
+			this.locationStore.addLocation({
+				...location,
+				id: location.id,
+				createdAt: location.createdAt
+			})
+			// 恢复被 unlinkLocation 清掉的手账关联
+			this.journalStore.journals.forEach(j => {
+				if (j.locationName === '已删除地点') {
+					j.locationId = location.id
+					j.locationName = location.name
+				}
+			})
+			this.journalStore.persist()
+			this.locationId = location.id
+			this.pendingDelete = null
+			uni.showToast({ title: '已撤销', icon: 'success' })
 		},
 		formatDate(date) {
 			return dateUtil.formatDateDot(date)
@@ -432,4 +521,130 @@ export default {
 	bottom: calc(64rpx + env(safe-area-inset-bottom));
 	z-index: 100;
 }
+.undo-bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	background: var(--surface);
+	border: 1rpx solid var(--primary);
+	border-radius: 20rpx;
+	padding: 20rpx 28rpx;
+	margin: 16rpx 32rpx 0;
+	box-shadow: 0 2rpx 16rpx var(--shadow);
+}
+
+.undo-text {
+	font-size: 26rpx;
+	color: var(--fg);
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.undo-btn {
+	padding: 8rpx 28rpx;
+	background: var(--primary);
+	border-radius: 999rpx;
+	flex-shrink: 0;
+	margin-left: 16rpx;
+}
+
+.undo-btn-text {
+	font-size: 24rpx;
+	font-weight: 600;
+	color: var(--on-primary);
+}
+
 </style>
+
+/* 编辑弹窗 */
+.modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.35);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 999;
+}
+
+.modal-box {
+	background: var(--surface);
+	border-radius: 32rpx;
+	padding: 48rpx 40rpx 32rpx;
+	width: 520rpx;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	box-shadow: 0 12rpx 48rpx rgba(0, 0, 0, 0.1);
+}
+
+.modal-icon {
+	width: 96rpx;
+	height: 96rpx;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-bottom: 24rpx;
+}
+
+.modal-title {
+	font-size: 32rpx;
+	font-weight: 600;
+	color: var(--fg);
+	margin-bottom: 24rpx;
+}
+
+.edit-input {
+	width: 100%;
+	padding: 20rpx 24rpx;
+	border: 1rpx solid var(--border-light);
+	border-radius: 16rpx;
+	font-size: 28rpx;
+	color: var(--fg);
+	background: var(--bg);
+	margin-bottom: 16rpx;
+	box-sizing: border-box;
+}
+
+.modal-actions {
+	display: flex;
+	gap: 16rpx;
+	width: 100%;
+	margin-top: 8rpx;
+}
+
+.modal-btn {
+	flex: 1;
+	height: 80rpx;
+	border-radius: 20rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.modal-btn-cancel {
+	background: var(--surface);
+	border: 1rpx solid var(--border-light);
+}
+
+.modal-btn-danger {
+	background: var(--primary);
+}
+
+.modal-btn-text {
+	font-size: 28rpx;
+	font-weight: 500;
+	color: var(--fg);
+}
+
+.modal-btn-text-danger {
+	font-size: 28rpx;
+	font-weight: 600;
+	color: var(--on-primary);
+}

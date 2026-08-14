@@ -59,7 +59,10 @@
 							<Icon v-else name="mountain" :size="32" color="#FFFFFF" :strokeWidth="1.4" />
 						</view>
 						<view class="lc-body">
-							<text class="lc-title">{{ j.title }}</text>
+							<view class="lc-title-row">
+								<text class="lc-title">{{ j.title }}</text>
+								<Icon v-if="j.favorite" name="star" :size="22" color="#D9A54A" :strokeWidth="1.6" fill="#D9A54A" />
+							</view>
 							<text class="lc-loc">{{ j.locationName || '未知地点' }}</text>
 							<text class="lc-date">{{ formatRelative(j.createdAt) }}</text>
 						</view>
@@ -226,11 +229,35 @@ export default {
 			this.deleteTargetId = ''
 			this.deleteTargetTitle = ''
 			if (success) {
-				// 同步关联地点的统计数据（跨 store 同步逻辑收敛至 journalStore.syncLocationStats）
-				if (locationId) {
-					this.journalStore.syncLocationStats(locationId)
+				// 设置撤销定时器，3秒后执行关联同步
+				const timer = setTimeout(() => {
+					if (this.pendingDelete) {
+						if (locationId) {
+							this.journalStore.syncLocationStats(locationId)
+						}
+						this.pendingDelete = null
+					}
+				}, 3000)
+		onThumbError(journal) {
+			// 图片加载失败时仅记录失败状态，不修改 store 中的持久化数据
+			this.brokenThumbs = { ...this.brokenThumbs, [journal.id]: true }
+		},
+		undoDelete() {
+			if (!this.pendingDelete) return
+			clearTimeout(this.pendingDelete.timer)
+			const { journal } = this.pendingDelete
+			this.journalStore.addJournal({
+				...journal,
+				id: journal.id,
+				createdAt: journal.createdAt,
+				updatedAt: journal.updatedAt
+			})
+			this.pendingDelete = null
+			uni.showToast({ title: '已撤销', icon: 'success' })
+		}
+	}
+					locationId
 				}
-				uni.showToast({ title: '已删除', icon: 'success' })
 			} else {
 				uni.showToast({ title: '删除失败', icon: 'none' })
 			}
@@ -342,6 +369,12 @@ export default {
 	display: flex;
 	flex-direction: column;
 	gap: 4rpx;
+}
+
+.lc-title-row {
+	display: flex;
+	align-items: center;
+	gap: 8rpx;
 }
 
 .lc-title {

@@ -123,6 +123,7 @@ import themeMixin from '@/mixins/theme.js'
 import statusbarMixin from '@/mixins/statusbar.js'
 import { getMoodColor } from '@/constants/mood.js'
 import { getCoverStrokeColor } from '@/constants/cover.js'
+import storage from '@/utils/storage.js'
 import { safeBack } from '@/utils/nav.js'
 
 export default {
@@ -283,6 +284,9 @@ export default {
 				}))
 
 			this.searched = true
+			if (kw) {
+				this.saveHistory(kw)
+			}
 		},
 		coverColorOf(journal) {
 			return getMoodColor(journal.mood)
@@ -317,6 +321,9 @@ export default {
 				raw: l
 			}))
 			this.searched = true
+			if (kw) {
+				this.saveHistory(kw)
+			}
 		},
 		onBack() {
 			safeBack('/pages/index/index')
@@ -353,6 +360,27 @@ export default {
 				result.push({ text: str.substring(lastIndex), highlight: false })
 			}
 			return result
+		},
+		saveHistory(keyword) {
+			const kw = keyword.trim()
+			if (!kw) return
+			const idx = this.searchHistory.indexOf(kw)
+			if (idx !== -1) {
+				this.searchHistory.splice(idx, 1)
+			}
+			this.searchHistory.unshift(kw)
+			if (this.searchHistory.length > 10) {
+				this.searchHistory = this.searchHistory.slice(0, 10)
+			}
+			storage.set(storage.KEYS.SEARCH_HISTORY, this.searchHistory)
+		},
+		tapHistory(keyword) {
+			this.keyword = keyword
+			this.doSearch()
+		},
+		clearHistory() {
+			this.searchHistory = []
+			storage.set(storage.KEYS.SEARCH_HISTORY, [])
 		},
 		strokeColor(coverColor) {
 			return getCoverStrokeColor(coverColor)
@@ -553,5 +581,58 @@ export default {
 	font-size: 26rpx;
 	color: var(--text-secondary);
 	line-height: 1.5;
+}
+
+/* 搜索历史 */
+.history-section {
+	padding: 8rpx 0;
+}
+
+.history-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 20rpx;
+}
+
+.history-title {
+	font-size: 26rpx;
+	font-weight: 600;
+	color: var(--text-secondary);
+}
+
+.history-clear {
+	width: 56rpx;
+	height: 56rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 16rpx;
+}
+
+.history-clear:active {
+	background: var(--input-bg);
+}
+
+.history-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12rpx;
+}
+
+.history-item {
+	padding: 12rpx 24rpx;
+	background: var(--input-bg);
+	border-radius: 999rpx;
+	display: inline-flex;
+}
+
+.history-item:active {
+	opacity: 0.7;
+}
+
+.history-text {
+	font-size: 24rpx;
+	color: var(--text-secondary);
 }
 </style>
